@@ -1,18 +1,38 @@
 const { response } = require("express");
 const Users = require("../models/Users");
 
+// const getUsers = async (req, res) => {
+//     try {
+//         const users = await Users.findAll({
+//             where: {UserID: req.user.id}
+//         });
+//         return res.send(users);
+//     } catch (err) {
+//         res.status(500).send({
+//             message: "Błąd serwera",
+//         });
+//     }
+// };
+
 const getUsers = async (req, res) => {
     try {
-        const users = await Users.findAll({
-            where: {UserID: req.user.id}
-        });
+        let whereClause = {};
+        if (req.user) {
+            whereClause.UserID = req.user.id;
+        }
+
+        const users = await Users.findAll({where: whereClause});
         return res.send(users);
+        // res.status(500).send({
+        //     message: "Błąd serwera",
+        // });
     } catch (err) {
         res.status(500).send({
             message: "Błąd serwera",
         });
     }
 };
+
 
 const getUserById = async (req, res) => {
     try {
