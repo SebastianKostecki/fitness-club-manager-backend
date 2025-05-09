@@ -45,16 +45,17 @@ const createRoom = async (req, res) => {
 
 const updateRoom = async (req, res) => {
     try {
-        const { RoomName, Capacity,  Location } = req.body;
-        const updateRoom = await Rooms.update({ RoomName, Capacity,  Location }, {
-            where: { RoomID: req.params.id }
-        });
-        if (updateRoom[0] > 0) {
-            return res.send({ message: "Sala zaktualizowana." });
-        } else {
+        const { RoomName, Capacity, Location } = req.body;
+
+        const room = await Rooms.findByPk(req.params.id);
+        if (!room) {
             return res.status(404).send({ message: "Nie znaleziono sali." });
         }
+        await room.update({ RoomName, Capacity, Location });
+        return res.send({ message: "Sala zaktualizowana." });
+        
     } catch (err) {
+        console.error('Błąd przy aktualizacji sali:', err);
         res.status(500).send({
             message: "Błąd serwera",
         });

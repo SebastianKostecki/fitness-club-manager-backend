@@ -17,11 +17,12 @@ const Users = require("../models/Users");
 const getUsers = async (req, res) => {
     try {
         let whereClause = {};
-        if (req.user) {
-            whereClause.UserID = req.user.id;
-        }
+        // if (req.user) {
+        //     whereClause.UserID = req.user.id;
+        // }
 
-        const users = await Users.findAll({where: whereClause});
+        // const users = await Users.findAll({where: whereClause});
+        const users = await Users.findAll();
         return res.send(users);
         // res.status(500).send({
         //     message: "Błąd serwera",
@@ -65,20 +66,23 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
     try {
         const { Username, Password, Email, Role } = req.body;
-        const updatedUser = await Users.update({ Username, Password, Email, Role }, {
-            where: { UserID: req.params.id }
-        });
-        if (updatedUser[0] > 0) {
-            return res.send({ message: "Użytkownik zaktualizowany." });
-        } else {
+
+        const user = await Users.findByPk(req.params.id);
+        if (!user) {
             return res.status(404).send({ message: "Nie znaleziono użytkownika." });
         }
+
+        await user.update({ Username, Password, Email, Role });
+        return res.send({ message: "Użytkownik zaktualizowany." });
+
     } catch (err) {
+        console.error("Błąd przy aktualizacji użytkownika:", err);
         res.status(500).send({
             message: "Błąd serwera",
         });
     }
 };
+
 
 const deleteUser = async (req, res) => {
     try {
