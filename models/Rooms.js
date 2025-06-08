@@ -24,7 +24,6 @@ const Rooms = sequelize.define("rooms", {
     }
     
 }, {
-    // Opcje tabeli
     tableName: 'rooms',
     timestamps: false
 });

@@ -75,6 +75,7 @@ const registerSchema = Joi.object({
     const token = jwt.sign({ id: user.UserID }, 'zsedcftgbhujmkol');
     return res.header("auth-token", token).send({
       jwt: token,
+      role: user.Role,
     });
   };
   

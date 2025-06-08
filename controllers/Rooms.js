@@ -1,5 +1,5 @@
 const { response } = require("express");
-const Rooms = require("../models/Rooms");
+const { Rooms, Equipment, RoomEquipment } = require("../models");
 
 
 const getRooms = async (req, res) => {
@@ -79,10 +79,49 @@ const deleteRoom = async (req, res) => {
     }
 };
 
+
+
+const getRoomDetails = async (req, res) => {
+  try {
+    const roomId = req.params.id;
+
+    const room = await Rooms.findOne({
+      where: { RoomID: roomId },
+      raw: true,
+    });
+
+    if (!room) {
+      return res.status(404).send({ message: "Sala nie istnieje" });
+    }
+
+    const equipment = await RoomEquipment.findAll({
+      where: { RoomID: roomId },
+      include: [{
+        model: Equipment,
+        as: "equipment",
+        attributes: ["EquipmentName", "Description"],
+      }],
+    });
+
+    return res.send({
+      room,
+      equipment: equipment.map((item) => ({
+        EquipmentName: item.equipment.EquipmentName,
+        Description: item.equipment.Description,
+        Quantity: item.Quantity
+      })),
+    });
+  } catch (err) {
+    console.error("Błąd przy pobieraniu szczegółów sali:", err);
+    res.status(500).send({ message: "Błąd serwera" });
+  }
+};
+
 module.exports = {
     getRooms,
     getRoombyId,
     createRoom,
     updateRoom,
-    deleteRoom
+    deleteRoom,
+    getRoomDetails
 };
