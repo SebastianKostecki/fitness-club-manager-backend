@@ -1,10 +1,10 @@
 const { Sequelize } = require("sequelize");
 
 const sequelize = new Sequelize(
-    "fitness", 
-    "root",
-    "",
-    {host: "localhost", dialect: "mysql"}
+    "sibbo18_fitness", 
+    "sibbo18_admin",
+    "Galaktyka360",
+    {host: "wn01.webd.pl", dialect: "mysql"}
 )
 
 module.exports = sequelize;
