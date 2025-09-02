@@ -6,7 +6,16 @@ const Users = require("../models/Users")
 const registerSchema = Joi.object({
     username: Joi.string().min(3).required(),
     email: Joi.string().min(6).required().email(),
-    password: Joi.string().min(6).required(),
+    password: Joi.string()
+  .min(8)
+  .max(32)
+  .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*]).+$'))
+  .required()
+  .messages({
+    'string.pattern.base': 'Hasło musi zawierać małą i wielką literę, cyfrę oraz znak specjalny',
+    'string.min': 'Hasło musi mieć co najmniej 8 znaków',
+    'string.max': 'Hasło może mieć maksymalnie 32 znaki',
+  }),
   });
   
   // register user

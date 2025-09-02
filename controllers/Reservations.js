@@ -68,6 +68,7 @@ const getReservationById = async (req, res) => {
 const createReservation = async (req, res) => {
   try {
     const { UserID, Status, ClassID } = req.body;
+    // RserevationType - userReservation/trainerRerervation
     const newReservation = await Reservations.create({ UserID, Status, ClassID });
     return res.status(201).send(newReservation);
   } catch (err) {
