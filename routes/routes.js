@@ -8,16 +8,18 @@ const equipment=require("../controllers/Equipment.js");
 const roomEquipment=require("../controllers/RoomEquipment.js");
 const fitnessClasses=require("../controllers/FitnessClasses.js");
 const reservations = require("../controllers/Reservations.js");
-
+const calendarRoutes = require("./calendar.js");
+const { checkRole, checkOwnershipOrRole } = require("../middleware/roleCheck");
 
 const router = express.Router();
 
-//Users
-router.get("/users", verify, users.getUsers);
-router.get("/users/:id", verify, users.getUserById);
-router.post("/users", verify, users.createUser);
-router.put("/users/:id", verify, users.updateUser);
-router.delete("/users/:id", verify, users.deleteUser);
+//Users - with role-based access control
+router.get("/users", verify, users.getUsers); // Role logic inside controller
+router.get("/users/:id", verify, checkOwnershipOrRole(['admin', 'receptionist']), users.getUserById);
+router.post("/users", verify, checkRole(['admin']), users.createUser);
+router.put("/users/:id", verify, checkOwnershipOrRole(['admin', 'receptionist']), users.updateUser);
+router.put("/users/:id/role", verify, checkRole(['admin', 'receptionist']), users.updateUserRole);
+router.delete("/users/:id", verify, users.deleteUser); // Permission logic inside controller
 
 //Rooms
 router.get("/rooms", verify, rooms.getRooms);
@@ -59,6 +61,7 @@ router.delete("/reservations/:id", verify, reservations.deleteReservation);
 router.post("/register", auth.registerUser);
 router.post("/login", auth.loginUser);
 
-
+//Calendar
+router.use("/calendar", calendarRoutes);
 
 module.exports = router;

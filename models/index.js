@@ -7,6 +7,7 @@ const Rooms           = require("./Rooms");
 const Reservations    = require("./Reservations");
 const Users           = require("./Users");
 const FitnessClasses  = require("./FitnessClasses");
+const RoomReservations = require("./RoomReservations");
 
 /* ---------- Sprzęt ↔︎ RoomEquipment ---------- */
 Equipment.hasMany(RoomEquipment, {
@@ -66,6 +67,26 @@ FitnessClasses.hasMany(Reservations, {
   onDelete : "CASCADE",
 });
 
+/* ---------- RoomReservations ↔︎ Users ---------- */
+RoomReservations.belongsTo(Users, {
+  foreignKey: "CreatedByUserID",
+  as: "user"
+});
+Users.hasMany(RoomReservations, {
+  foreignKey: "CreatedByUserID",
+  as: "room_reservations"
+});
+
+/* ---------- RoomReservations ↔︎ Rooms ---------- */
+RoomReservations.belongsTo(Rooms, {
+  foreignKey: "RoomID",
+  as: "room"
+});
+Rooms.hasMany(RoomReservations, {
+  foreignKey: "RoomID",
+  as: "room_reservations"
+});
+
 /* ---------- Eksport modeli ---------- */
 module.exports = {
   sequelize,
@@ -75,4 +96,5 @@ module.exports = {
   Reservations,
   Users,
   FitnessClasses,
+  RoomReservations,
 };

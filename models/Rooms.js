@@ -15,17 +15,24 @@ const Rooms = sequelize.define("rooms", {
     },
     Capacity: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: false,
+        validate: {
+            min: 1,
+            max: 1000
+        }
     },
     Location: {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true
     }
-    
 }, {
     tableName: 'rooms',
-    timestamps: false
+    timestamps: true,
+    paranoid: true,
+    createdAt: 'CreatedAt',
+    updatedAt: 'UpdatedAt',
+    deletedAt: 'DeletedAt'
 });
 
 module.exports = Rooms;

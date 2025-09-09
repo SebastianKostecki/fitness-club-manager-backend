@@ -3,24 +3,47 @@ const sequelize = require("../config/sequelize");
 
 const RoomEquipment = sequelize.define("room_equipment", {
   RoomID: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.BIGINT,
     allowNull: false,
-    primaryKey: true
+    primaryKey: true,
+    references: {
+      model: 'rooms',
+      key: 'RoomID'
+    },
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
   },
   EquipmentID: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    primaryKey: true
+    primaryKey: true,
+    references: {
+      model: 'equipment',
+      key: 'EquipmentID'
+    },
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE'
   },
   Quantity: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    validate: {
+      min: 1
+    }
   }
 }, {
   tableName: "room_equipment",
-  timestamps: false
+  timestamps: true,
+  paranoid: true,
+  createdAt: 'CreatedAt',
+  updatedAt: 'UpdatedAt',
+  deletedAt: 'DeletedAt',
+  indexes: [
+    {
+      fields: ['RoomID', 'EquipmentID'],
+      name: 'idx_room_equipment_composite'
+    }
+  ]
 });
-
-
 
 module.exports = RoomEquipment;
