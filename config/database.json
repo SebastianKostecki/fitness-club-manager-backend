@@ -1,0 +1,32 @@
+{
+  "development": {
+    "username": "sibbo18_admin",
+    "password": "Galaktyka360",
+    "database": "sibbo18_fitness",
+    "host": "mn01.webd.pl",
+    "port": 3306,
+    "dialect": "mysql",
+    "dialectOptions": {
+      "supportBigNumbers": true,
+      "bigNumberStrings": true,
+      "dateStrings": true,
+      "typeCast": true
+    },
+    "timezone": "+01:00"
+  },
+  "production": {
+    "username": "sibbo18_admin",
+    "password": "Galaktyka360",
+    "database": "sibbo18_fitness",
+    "host": "mn01.webd.pl",
+    "port": 3306,
+    "dialect": "mysql",
+    "dialectOptions": {
+      "supportBigNumbers": true,
+      "bigNumberStrings": true,
+      "dateStrings": true,
+      "typeCast": true
+    },
+    "timezone": "+01:00"
+  }
+}

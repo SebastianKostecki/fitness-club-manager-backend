@@ -1,8 +1,9 @@
 const express = require('express');
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const path = require('path');
 const Router = require("./routes/routes");
-const mySqlConnection = require('./config/database');
+const sequelize = require('./config/sequelize');
 
 /*
  * Express & bodyParser
@@ -19,9 +20,19 @@ app.use(
 app.use(bodyParser.json());
 app.use(cors()); // use cors
 
-const PORT =  8080;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}. (http://localhost:${PORT}/)`);
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Health check endpoints
+app.get("/healthz", (req, res) => res.send("ok"));
+app.get("/debug/db", async (req, res) => {
+  try { 
+    await sequelize.authenticate(); 
+    res.json({ db: "ok" }); 
+  }
+  catch (e) { 
+    res.status(500).json({ db: "fail", error: e.message }); 
+  }
 });
 
 /*
@@ -31,22 +42,28 @@ app.listen(PORT, () => {
 app.use(Router);
 
 /*
- * @TODO: Connect to DB
+ * Global error handlers - prevent process from dying
  *
  */
+process.on('unhandledRejection', e => console.error('UNHANDLED REJECTION:', e));
+process.on('uncaughtException', e => console.error('UNCAUGHT EXCEPTION:', e));
 
-mySqlConnection.connect((error)=>{
-  if (!error){
-    console.log("------------------------");
-  console.log("\x1b[32m%s\x1b[0m", "✓ | Connected");
-  console.log("------------------------");
-  } else {
-    console.log("------------------------");
-  console.log("\x1b[31m%s\x1b[0m", "✗ | Connection Failed");
-  console.log("------------------------");
-  console.log(error);
-  console.log("------------------------");
-  }
-})
+/*
+ * Start server (always) and check DB separately
+ *
+ */
+console.time("boot");
+const HOST = process.env.HOST || '0.0.0.0';
+const PORT = process.env.PORT || 8080;
+const server = app.listen(PORT, HOST, () => {
+  console.timeEnd("boot");
+  console.log(`Listening on http://${HOST}:${PORT}`);
+});
 
-mySqlConnection.end();
+// Keep process alive (tymczasowa kotwica)
+if (process.stdin.isTTY) process.stdin.resume();
+
+// Check DB connection separately (don't block startup)
+sequelize.authenticate()
+  .then(() => console.log("DB OK"))
+  .catch(e => console.error("DB FAIL:", e.message));

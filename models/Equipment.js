@@ -18,8 +18,11 @@ const Equipment = sequelize.define("equipment", {
   }
 }, {
   tableName: "equipment",
-  timestamps: false,
+  timestamps: true,
+  paranoid: true,
+  createdAt: 'CreatedAt',
+  updatedAt: 'UpdatedAt',
+  deletedAt: 'DeletedAt'
 });
-
 
 module.exports = Equipment;
