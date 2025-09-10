@@ -8,6 +8,7 @@ const Reservations    = require("./Reservations");
 const Users           = require("./Users");
 const FitnessClasses  = require("./FitnessClasses");
 const RoomReservations = require("./RoomReservations");
+const EmailReminders  = require("./EmailReminders");
 
 /* ---------- Sprzęt ↔︎ RoomEquipment ---------- */
 Equipment.hasMany(RoomEquipment, {
@@ -87,6 +88,44 @@ Rooms.hasMany(RoomReservations, {
   as: "room_reservations"
 });
 
+/* ---------- EmailReminders associations ---------- */
+EmailReminders.belongsTo(Reservations, {
+  foreignKey: "ReservationID",
+  as: "reservation"
+});
+Reservations.hasMany(EmailReminders, {
+  foreignKey: "ReservationID",
+  as: "email_reminders"
+});
+
+EmailReminders.belongsTo(Users, {
+  foreignKey: "UserID",
+  as: "user"
+});
+Users.hasMany(EmailReminders, {
+  foreignKey: "UserID",
+  as: "email_reminders"
+});
+
+EmailReminders.belongsTo(FitnessClasses, {
+  foreignKey: "ClassID",
+  as: "fitness_class"
+});
+FitnessClasses.hasMany(EmailReminders, {
+  foreignKey: "ClassID",
+  as: "email_reminders"
+});
+
+/* ---------- EmailReminders ↔︎ RoomReservations ---------- */
+EmailReminders.belongsTo(RoomReservations, {
+  foreignKey: "RoomReservationID",
+  as: "room_reservation"
+});
+RoomReservations.hasMany(EmailReminders, {
+  foreignKey: "RoomReservationID",
+  as: "email_reminders"
+});
+
 /* ---------- Eksport modeli ---------- */
 module.exports = {
   sequelize,
@@ -97,4 +136,5 @@ module.exports = {
   Users,
   FitnessClasses,
   RoomReservations,
+  EmailReminders,
 };

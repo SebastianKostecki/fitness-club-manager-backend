@@ -1,147 +1,120 @@
 /**
- * Role-based authorization middleware
- * 
- * Roles hierarchy:
- * - admin: can do everything
- * - receptionist: can manage users (except admins), change regular<->trainer
- * - trainer: can create classes, view own data
- * - regular: basic user, view own data
+ * Role-based access control middleware
+ * Reads role from 'auth-token' header or Authorization Bearer token
  */
-
-const { Op } = require('sequelize');
 
 /**
- * Check if user has required role
- * @param {Array} allowedRoles - Array of roles that can access the endpoint
+ * Extract user role from request headers
+ * @param {Object} req - Express request object
+ * @returns {string|null} User role or null
  */
-const checkRole = (allowedRoles) => {
+const getUserRole = (req) => {
+    // Try auth-token header first
+    if (req.headers['auth-token']) {
+        return req.headers['auth-role'] || req.user?.Role || null;
+    }
+    
+    // Try Authorization Bearer token
+    if (req.headers.authorization) {
+        return req.headers['auth-role'] || req.user?.Role || null;
+    }
+    
+    return req.user?.Role || null;
+};
+
+/**
+ * Check if user is admin
+ */
+const isAdmin = (req, res, next) => {
+    const role = getUserRole(req);
+    if (role === 'admin') {
+        return next();
+    }
+    return res.status(403).json({ message: "Access denied. Admin role required." });
+};
+
+/**
+ * Check if user is receptionist
+ */
+const isReceptionist = (req, res, next) => {
+    const role = getUserRole(req);
+    if (role === 'receptionist') {
+        return next();
+    }
+    return res.status(403).json({ message: "Access denied. Receptionist role required." });
+};
+
+/**
+ * Check if user is admin or receptionist
+ */
+const adminOrReceptionist = (req, res, next) => {
+    const role = getUserRole(req);
+    if (role === 'admin' || role === 'receptionist') {
+        return next();
+    }
+    return res.status(403).json({ 
+        message: "Access denied. Admin or receptionist role required." 
+    });
+};
+
+/**
+ * Check if user is admin or trainer
+ */
+const adminOrTrainer = (req, res, next) => {
+    const role = getUserRole(req);
+    if (role === 'admin' || role === 'trainer') {
+        return next();
+    }
+    return res.status(403).json({ 
+        message: "Access denied. Admin or trainer role required." 
+    });
+};
+
+/**
+ * Generic role checker
+ * @param {Array} allowedRoles - Array of allowed roles
+ * @returns {Function} Middleware function
+ */
+const ensureRole = (allowedRoles) => {
     return (req, res, next) => {
-        const userRole = req.headers["auth-role"];
-        
-        if (!userRole) {
-            return res.status(401).json({ 
-                error: 'Role not specified',
-                message: 'auth-role header required'
-            });
-        }
-        
-        if (allowedRoles.includes(userRole)) {
+        const role = getUserRole(req);
+        if (allowedRoles.includes(role)) {
             return next();
         }
-        
         return res.status(403).json({ 
-            error: 'Insufficient permissions',
-            required: allowedRoles,
-            current: userRole 
+            message: `Access denied. Required roles: ${allowedRoles.join(', ')}` 
         });
     };
 };
 
 /**
- * Check if user is owner of resource OR has required role
- * @param {Array} allowedRoles - Roles that can access any resource
+ * Check if user can manage reservations (own reservations or admin/receptionist)
  */
-const checkOwnershipOrRole = (allowedRoles = []) => {
-    return (req, res, next) => {
-        const userRole = req.headers["auth-role"];
-        const userId = req.user.id;
-        const targetUserId = parseInt(req.params.id);
-        
-        // Owner can always access their own data
-        if (userId === targetUserId) {
-            return next();
-        }
-        
-        // Check if user has privileged role
-        if (allowedRoles.includes(userRole)) {
-            return next();
-        }
-        
-        return res.status(403).json({ 
-            error: 'Access denied',
-            message: 'You can only access your own data or need higher privileges'
-        });
-    };
-};
-
-/**
- * Check role change permissions
- * @param {string} currentRole - Current user role making the request
- * @param {string} targetCurrentRole - Current role of target user
- * @param {string} newRole - New role to assign
- */
-const canChangeRole = (currentRole, targetCurrentRole, newRole) => {
-    // Admin can change any role to any role
-    if (currentRole === 'admin') {
-        return { allowed: true };
+const canManageReservation = (req, res, next) => {
+    const role = getUserRole(req);
+    const userId = req.user?.UserID || req.user?.id;
+    
+    // Admin and receptionist can manage all reservations
+    if (role === 'admin' || role === 'receptionist') {
+        return next();
     }
     
-    // Receptionist can only change regular <-> trainer
-    if (currentRole === 'receptionist') {
-        const allowedRoles = ['regular', 'trainer'];
-        
-        if (allowedRoles.includes(targetCurrentRole) && allowedRoles.includes(newRole)) {
-            return { allowed: true };
-        }
-        
-        return { 
-            allowed: false, 
-            message: 'Receptionist can only change between regular and trainer roles'
-        };
+    // Users can manage their own reservations (will be checked in controller)
+    if (userId) {
+        return next();
     }
     
-    // Regular and trainer cannot change roles
-    return { 
-        allowed: false, 
-        message: 'Insufficient permissions to change roles'
-    };
-};
-
-/**
- * Check delete permissions
- * @param {string} userRole - Role of user making request
- * @param {number} userId - ID of user making request
- * @param {number} targetUserId - ID of user to delete
- * @param {string} targetUserRole - Role of user to delete
- */
-const canDeleteUser = (userRole, userId, targetUserId, targetUserRole) => {
-    // Users can delete their own account
-    if (userId === targetUserId) {
-        return { allowed: true };
-    }
-    
-    // Admin can delete anyone except other admins (safety)
-    if (userRole === 'admin') {
-        if (targetUserRole === 'admin' && userId !== targetUserId) {
-            return { 
-                allowed: false, 
-                message: 'Admins cannot delete other admin accounts'
-            };
-        }
-        return { allowed: true };
-    }
-    
-    // Receptionist can delete regular/trainer accounts
-    if (userRole === 'receptionist') {
-        const allowedToDelete = ['regular', 'trainer'];
-        if (allowedToDelete.includes(targetUserRole)) {
-            return { allowed: true };
-        }
-        return { 
-            allowed: false, 
-            message: 'Receptionist cannot delete admin or receptionist accounts'
-        };
-    }
-    
-    return { 
-        allowed: false, 
-        message: 'Insufficient permissions'
-    };
+    return res.status(403).json({ 
+        message: "Access denied. Cannot manage reservations." 
+    });
 };
 
 module.exports = {
-    checkRole,
-    checkOwnershipOrRole,
-    canChangeRole,
-    canDeleteUser
+    isAdmin,
+    isReceptionist,
+    adminOrReceptionist,
+    adminOrTrainer,
+    ensureRole,
+    canManageReservation,
+    getUserRole
 };

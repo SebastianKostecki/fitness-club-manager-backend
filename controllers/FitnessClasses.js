@@ -65,9 +65,18 @@ const updateFitnessClass = async (req, res) => {
     try {
         const { TrainerID, RoomID, Title, StartTime, EndTime, Capacity, Status } = req.body;
         const fitnessClass = await FitnessClasses.findByPk(req.params.id);
+        const userRole = req.headers['auth-role'] || req.user?.Role;
+        const userId = req.user?.UserID || req.user?.id;
 
         if (!fitnessClass) {
             return res.status(404).send({ message: "Nie znaleziono zajęć." });
+        }
+
+        // Trainer can only edit their own classes, admin can edit any
+        if (userRole === 'trainer' && fitnessClass.TrainerID != userId) {
+            return res.status(403).json({ 
+                message: "Access denied. Trainers can only edit their own classes." 
+            });
         }
 
         await fitnessClass.update({
@@ -89,6 +98,21 @@ const updateFitnessClass = async (req, res) => {
 
 const deleteFitnessClass = async (req, res) => {
     try {
+        const fitnessClass = await FitnessClasses.findByPk(req.params.id);
+        const userRole = req.headers['auth-role'] || req.user?.Role;
+        const userId = req.user?.UserID || req.user?.id;
+
+        if (!fitnessClass) {
+            return res.status(404).send({ message: "Nie znaleziono zajęć." });
+        }
+
+        // Trainer can only delete their own classes, admin can delete any
+        if (userRole === 'trainer' && fitnessClass.TrainerID != userId) {
+            return res.status(403).json({ 
+                message: "Access denied. Trainers can only delete their own classes." 
+            });
+        }
+
         const deleted = await FitnessClasses.destroy({
             where: { ClassID: req.params.id }
         });

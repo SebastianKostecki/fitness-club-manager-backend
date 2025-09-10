@@ -1,4 +1,7 @@
 const calendarService = require('../services/calendarService');
+const { QueryTypes } = require('sequelize');
+const sequelize = require('../config/sequelize');
+const { zonedTimeToUtc } = require('date-fns-tz');
 
 /**
  * Get user's calendar events
@@ -101,39 +104,75 @@ const getTrainerCalendar = async (req, res) => {
 
 /**
  * Get room availability
- * GET /calendar/rooms/:roomId?date=YYYY-MM-DD
+ * GET /calendar/rooms/availability?roomId=1&date=2025-09-10
  */
 const getRoomAvailability = async (req, res) => {
     try {
-        const { roomId } = req.params;
-        const { date } = req.query;
+        const { roomId, date } = req.query;
 
-        if (!roomId || !date) {
-            return res.status(400).json({ 
-                error: 'Missing required parameters: roomId, date' 
-            });
+        // Validate roomId
+        const id = Number(roomId);
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({ error: 'Invalid roomId' });
         }
 
-        const checkDate = new Date(date);
-        if (isNaN(checkDate.getTime())) {
-            return res.status(400).json({ 
-                error: 'Invalid date format. Use YYYY-MM-DD' 
-            });
+        // Validate date format
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
+            return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
         }
 
-        const availability = await calendarService.getRoomAvailability(
-            parseInt(roomId), 
-            checkDate
-        );
+        // Calculate day range in Europe/Warsaw timezone
+        const tz = 'Europe/Warsaw';
+        const startLocal = new Date(`${date}T00:00:00`);
+        const endLocal = new Date(`${date}T23:59:59.999`);
+        const startUtc = zonedTimeToUtc(startLocal, tz);
+        const endUtc = zonedTimeToUtc(endLocal, tz);
 
-        res.json(availability);
+        console.info('[availability]', { 
+            roomId: id, 
+            date, 
+            startUtc: startUtc.toISOString(), 
+            endUtc: endUtc.toISOString() 
+        });
+
+        // Query both fitness classes and room reservations with UNION ALL
+        const sql = `
+            SELECT 'class' AS type,
+                   fc.ClassID AS id,
+                   fc.Title AS title,
+                   fc.StartTime AS start,
+                   fc.EndTime AS \`end\`,
+                   'fitness_classes' AS source
+            FROM fitness_classes fc
+            WHERE fc.RoomID = :roomId
+              AND fc.Status = 'Active'
+              AND fc.StartTime < :end
+              AND fc.EndTime > :start
+            UNION ALL
+            SELECT 'room_reservation' AS type,
+                   rr.RoomReservationID AS id,
+                   rr.Title AS title,
+                   rr.StartTime AS start,
+                   rr.EndTime AS \`end\`,
+                   'room_reservations' AS source
+            FROM room_reservations rr
+            WHERE rr.RoomID = :roomId
+              AND rr.Status = 'Active'
+              AND rr.StartTime < :end
+              AND rr.EndTime > :start
+            ORDER BY start ASC
+        `;
+
+        const events = await sequelize.query(sql, {
+            replacements: { roomId: id, start: startUtc, end: endUtc },
+            type: QueryTypes.SELECT
+        });
+
+        return res.json({ roomId: id, date, events });
 
     } catch (error) {
-        console.error('Error fetching room availability:', error);
-        res.status(500).json({ 
-            error: 'Internal server error',
-            message: error.message 
-        });
+        console.error('getRoomAvailability error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 

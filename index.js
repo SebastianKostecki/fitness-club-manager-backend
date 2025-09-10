@@ -1,9 +1,11 @@
+ require('dotenv').config();
 const express = require('express');
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const path = require('path');
 const Router = require("./routes/routes");
 const sequelize = require('./config/sequelize');
+const cronJobs = require('./jobs/cronJobs');
 
 /*
  * Express & bodyParser
@@ -65,5 +67,9 @@ if (process.stdin.isTTY) process.stdin.resume();
 
 // Check DB connection separately (don't block startup)
 sequelize.authenticate()
-  .then(() => console.log("DB OK"))
+  .then(() => {
+    console.log("DB OK");
+    // Initialize cron jobs after DB connection is confirmed
+    cronJobs.init();
+  })
   .catch(e => console.error("DB FAIL:", e.message));

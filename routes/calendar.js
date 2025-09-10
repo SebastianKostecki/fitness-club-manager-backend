@@ -9,7 +9,8 @@ router.use(verifyToken);
 // Calendar routes
 router.get('/user', calendarController.getUserCalendar);
 router.get('/trainer', calendarController.getTrainerCalendar);
-router.get('/rooms/:roomId', calendarController.getRoomAvailability);
+router.get('/rooms/availability', calendarController.getRoomAvailability);
+router.get('/rooms/:roomId', calendarController.getRoomAvailability); // Legacy support
 
 // Room reservation routes
 router.post('/rooms/:roomId/reservations', calendarController.createRoomReservation);

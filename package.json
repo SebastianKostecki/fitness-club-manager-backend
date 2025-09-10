@@ -12,15 +12,21 @@
   "author": "Sebastian Kostecki",
   "license": "ISC",
   "dependencies": {
+    "@getbrevo/brevo": "^2.5.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
+    "date-fns": "^2.30.0",
+    "date-fns-tz": "^2.0.1",
+    "dotenv": "^17.2.2",
     "express": "^4.21.2",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mysql": "^2.18.1",
     "mysql2": "^3.12.0",
-    "sequelize": "^6.37.5"
+    "node-cron": "^3.0.3",
+    "sequelize": "^6.37.5",
+    "sib-api-v3-sdk": "^8.5.0"
   },
   "devDependencies": {
     "sequelize-cli": "^6.6.3"
