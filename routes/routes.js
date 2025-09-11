@@ -18,22 +18,30 @@ const {
     ensureRole,
     canManageReservation 
 } = require("../middleware/roleCheck");
+const { 
+    validateUserExists,
+    validateClassExists,
+    validateRoomExists,
+    validateReservationExists,
+    validateReservationReferences,
+    validateRoomReservationReferences
+} = require("../middleware/validateReferences");
 
 const router = express.Router();
 
 //Users
 router.get("/users", verify, users.getUsers);
-router.get("/users/:id", verify, users.getUserById);
+router.get("/users/:id", verify, validateUserExists, users.getUserById);
 router.post("/users", verify, users.createUser);
-router.put("/users/:id", verify, users.updateUser);
-router.delete("/users/:id", verify, users.deleteUser);
+router.put("/users/:id", verify, validateUserExists, users.updateUser);
+router.delete("/users/:id", verify, validateUserExists, users.deleteUser);
 
 //Rooms
 router.get("/rooms", verify, rooms.getRooms);
-router.get("/rooms/:id", verify, rooms.getRoombyId);
+router.get("/rooms/:id", verify, validateRoomExists, rooms.getRoombyId);
 router.post("/rooms", verify, adminOrReceptionist, rooms.createRoom);
-router.put("/rooms/:id", verify, adminOrReceptionist, rooms.updateRoom);
-router.delete("/rooms/:id", verify, adminOrReceptionist, rooms.deleteRoom);
+router.put("/rooms/:id", verify, adminOrReceptionist, validateRoomExists, rooms.updateRoom);
+router.delete("/rooms/:id", verify, adminOrReceptionist, validateRoomExists, rooms.deleteRoom);
 
 //Equipment
 router.get("/equipment",verify, equipment.getEquipment);
@@ -51,17 +59,17 @@ router.delete("/room-equipment/:roomId/:equipmentId", verify, adminOrReceptionis
 
 // Fitness Classes
 router.get("/classes", verify, fitnessClasses.getFitnessClasses);
-router.get("/classes/:id", verify, fitnessClasses.getFitnessClassById);
+router.get("/classes/:id", verify, validateClassExists, fitnessClasses.getFitnessClassById);
 router.post("/classes", verify, adminOrTrainer, fitnessClasses.createFitnessClass);
-router.put("/classes/:id", verify, adminOrTrainer, fitnessClasses.updateFitnessClass);
-router.delete("/classes/:id", verify, adminOrTrainer, fitnessClasses.deleteFitnessClass);
+router.put("/classes/:id", verify, adminOrTrainer, validateClassExists, fitnessClasses.updateFitnessClass);
+router.delete("/classes/:id", verify, adminOrTrainer, validateClassExists, fitnessClasses.deleteFitnessClass);
 
 //Reservations
 router.get("/reservations", verify, reservations.getReservations);
-router.get("/reservations/:id", verify, reservations.getReservationById);
-router.post("/reservations", verify, ensureRole(['regular', 'admin', 'receptionist']), reservations.createReservation);
-router.put("/reservations/:id", verify, canManageReservation, reservations.updateReservation);
-router.delete("/reservations/:id", verify, canManageReservation, reservations.deleteReservation);
+router.get("/reservations/:id", verify, validateReservationExists, reservations.getReservationById);
+router.post("/reservations", verify, ensureRole(['regular', 'admin', 'receptionist']), validateReservationReferences, reservations.createReservation);
+router.put("/reservations/:id", verify, canManageReservation, validateReservationExists, validateReservationReferences, reservations.updateReservation);
+router.delete("/reservations/:id", verify, canManageReservation, validateReservationExists, reservations.deleteReservation);
 
 
 //Auth
