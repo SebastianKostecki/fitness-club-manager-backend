@@ -306,10 +306,10 @@ class ReminderService {
         };
 
         try {
-            // Send email via Brevo template (class = template #2)
+            // Send email via Brevo template (class = template #1)
             const result = await sendTemplate({
                 to: emailParams.email,
-                templateId: 2, // Classes with trainer
+                templateId: 1, // Classes with trainer
                 params: {
                     firstName: emailParams.firstName,
                     className: emailParams.className,
@@ -401,10 +401,10 @@ class ReminderService {
         };
 
         try {
-            // Send email via Brevo template (personal room = template #1)
+            // Send email via Brevo template (personal room = template #2)
             const result = await sendTemplate({
                 to: emailParams.email,
-                templateId: 1, // Personal room reservations
+                templateId: 2, // Personal room reservations
                 params: {
                     firstName: emailParams.firstName,
                     className: emailParams.className,
