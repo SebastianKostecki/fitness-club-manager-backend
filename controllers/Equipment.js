@@ -45,7 +45,7 @@ const updateEquipment = async(req, res) => {
         const { EquipmentName, Description} = req.body;
         const equipment = await Equipment.findByPk(req.params.id);
         if (!equipment) {
-            return res.status(404).send({messagr:"Nie znaleziono sprzętu."});
+            return res.status(404).send({message:"Nie znaleziono sprzętu."});
         }
         await equipment.update({EquipmentName, Description});
         return res.send({message: "Sprzęt zaktualizowany."});
