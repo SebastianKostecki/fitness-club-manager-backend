@@ -62,7 +62,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, HOST, () => {
   console.timeEnd('boot');
-  console.log(`Listening on http://${HOST}:${PORT}`);
+  console.log(`Server running on http://${HOST}:${PORT} (fixed getCurrentUser)`);
 });
 
 // DB + crony po starcie
