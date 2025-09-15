@@ -32,6 +32,7 @@ const corsOptions = {
     'Content-Type',
     'Authorization', 
     'auth-role',
+    'auth-token',
     'X-Requested-With',
     'Accept',
     'Origin'
