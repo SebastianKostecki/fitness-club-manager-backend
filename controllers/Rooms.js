@@ -117,9 +117,43 @@ const getRoomDetails = async (req, res) => {
   }
 };
 
+/**
+ * Get room calendar/availability
+ * Delegates to calendar controller functionality
+ */
+const getRoomCalendar = async (req, res) => {
+  try {
+    const roomId = req.params.id;
+    const { date } = req.query;
+    
+    if (!date) {
+      return res.status(400).json({ 
+        error: 'Missing required query parameter: date (YYYY-MM-DD)' 
+      });
+    }
+
+    // Import calendar controller to delegate the actual logic
+    const calendarController = require('./calendarController');
+    
+    // Set up query params for getRoomAvailability
+    req.query.roomId = roomId;
+    req.query.date = date;
+    
+    return await calendarController.getRoomAvailability(req, res);
+    
+  } catch (error) {
+    console.error("Error in getRoomCalendar:", error);
+    res.status(500).json({ 
+      error: "Internal server error",
+      message: error.message 
+    });
+  }
+};
+
 module.exports = {
     getRooms,
     getRoombyId,
+    getRoomCalendar,
     createRoom,
     updateRoom,
     deleteRoom,
