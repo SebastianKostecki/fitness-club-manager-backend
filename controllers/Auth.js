@@ -82,6 +82,7 @@ async function loginUser(req, res) {
 
   return res.json({
     ok: true,
+    jwt: token,
     role: user.Role,
     user: { id: user.UserID, username: user.Username, email: user.Email },
   });
