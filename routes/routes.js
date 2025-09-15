@@ -1,3 +1,4 @@
+
 const express = require("express");
 
 const users = require("../controllers/Users.js");
@@ -31,14 +32,17 @@ const router = express.Router();
 
 //Users
 router.get("/users", verify, users.getUsers);
+router.get("/users/me", verify, users.getCurrentUser);
+router.get("/users/metrics", verify, users.getSystemMetrics);
 router.get("/users/:id", verify, validateUserExists, users.getUserById);
-router.post("/users", verify, users.createUser);
-router.put("/users/:id", verify, validateUserExists, users.updateUser);
-router.delete("/users/:id", verify, validateUserExists, users.deleteUser);
+router.post("/users", verify, adminOrReceptionist, users.createUser);
+router.put("/users/:id", verify, adminOrReceptionist, validateUserExists, users.updateUser);
+router.delete("/users/:id", verify, adminOrReceptionist, validateUserExists, users.deleteUser);
 
 //Rooms
 router.get("/rooms", verify, rooms.getRooms);
 router.get("/rooms/:id", verify, validateRoomExists, rooms.getRoombyId);
+router.get("/rooms/:id/calendar", verify, validateRoomExists, rooms.getRoomCalendar);
 router.post("/rooms", verify, adminOrReceptionist, rooms.createRoom);
 router.put("/rooms/:id", verify, adminOrReceptionist, validateRoomExists, rooms.updateRoom);
 router.delete("/rooms/:id", verify, adminOrReceptionist, validateRoomExists, rooms.deleteRoom);
@@ -65,6 +69,7 @@ router.put("/classes/:id", verify, adminOrTrainer, validateClassExists, fitnessC
 router.delete("/classes/:id", verify, adminOrTrainer, validateClassExists, fitnessClasses.deleteFitnessClass);
 
 //Reservations
+router.get("/reservations/raw", verify, reservations.getRawReservations);
 router.get("/reservations", verify, reservations.getReservations);
 router.get("/reservations/:id", verify, validateReservationExists, reservations.getReservationById);
 router.post("/reservations", verify, ensureRole(['regular', 'admin', 'receptionist']), validateReservationReferences, reservations.createReservation);
@@ -75,6 +80,7 @@ router.delete("/reservations/:id", verify, canManageReservation, validateReserva
 //Auth
 router.post("/register", auth.registerUser);
 router.post("/login", auth.loginUser);
+router.post("/logout", auth.logoutUser);
 
 //Calendar
 router.use("/calendar", calendarRoutes);
