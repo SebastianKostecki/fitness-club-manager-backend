@@ -271,8 +271,70 @@ const deleteUser = async (req, res) => {
     }
 };
 
+/**
+ * Get current authenticated user's info
+ */
+const getCurrentUser = async (req, res) => {
+    try {
+        const user = await Users.findByPk(req.user.id, {
+            attributes: { exclude: ['Password'] }
+        });
+        
+        if (!user) {
+            return res.status(404).json({ 
+                error: "User not found" 
+            });
+        }
+
+        return res.json(user);
+    } catch (err) {
+        console.error("Error fetching current user:", err);
+        res.status(500).json({
+            error: "Server error",
+            message: err.message
+        });
+    }
+};
+
+/**
+ * Get system metrics (for admin dashboard)
+ */
+const getSystemMetrics = async (req, res) => {
+    try {
+        const userRole = req.user.Role;
+        
+        if (userRole !== 'admin') {
+            return res.status(403).json({ 
+                error: "Access denied" 
+            });
+        }
+
+        const totalUsers = await Users.count();
+        const usersByRole = await Users.findAll({
+            attributes: [
+                'Role',
+                [Users.sequelize.fn('COUNT', Users.sequelize.col('Role')), 'count']
+            ],
+            group: ['Role']
+        });
+
+        return res.json({
+            totalUsers,
+            usersByRole
+        });
+    } catch (err) {
+        console.error("Error fetching system metrics:", err);
+        res.status(500).json({
+            error: "Server error",
+            message: err.message
+        });
+    }
+};
+
 module.exports = {
     getUsers,
+    getCurrentUser,
+    getSystemMetrics,
     getUserById,
     createUser,
     updateUser,
