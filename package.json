@@ -12,7 +12,7 @@
   "author": "Sebastian Kostecki",
   "license": "ISC",
   "dependencies": {
-    "@getbrevo/brevo": "^2.5.0",
+    "@getbrevo/brevo": "^3.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cookie-parser": "^1.4.7",

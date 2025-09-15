@@ -7,3 +7,39 @@ import-to-planetscale.js
 migrate-with-sequelize.js
 seed-planetscale.js
 test-planetscale-simple.js
+
+# local scripts & secrets
+import-*.js
+seed-*.js
+create-*.js
+check-*.js
+reset-*.js
+update-*.js
+test-*.js
+*.sql
+*cookies*.txt
+
+
+# local scripts & secrets
+import-*.js
+seed-*.js
+create-*.js
+check-*.js
+reset-*.js
+update-*.js
+test-*.js
+*.sql
+*cookies*.txt
+
+
+# local scripts & secrets
+import-*.js
+seed-*.js
+create-*.js
+check-*.js
+reset-*.js
+update-*.js
+test-*.js
+*.sql
+*cookies*.txt
+
