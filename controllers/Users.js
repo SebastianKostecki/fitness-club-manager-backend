@@ -10,7 +10,7 @@ const Users = require("../models/Users");
  */
 const canChangeRole = (currentUserRole, targetCurrentRole, newRole) => {
     // Valid roles
-    const validRoles = ['regular', 'trainer', 'admin', 'receptionist'];
+    const validRoles = ['regular', 'trener', 'admin', 'receptionist'];
     
     if (!validRoles.includes(newRole)) {
         return {
@@ -124,7 +124,7 @@ const createUser = async (req, res) => {
         const { Username, Password, Email, Role = 'regular' } = req.body;
         
         // Validate role
-        const validRoles = ['regular', 'trainer', 'admin', 'receptionist'];
+        const validRoles = ['regular', 'trener', 'admin', 'receptionist'];
         if (!validRoles.includes(Role)) {
             return res.status(400).json({
                 error: "Invalid role",
