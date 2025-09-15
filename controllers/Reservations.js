@@ -1,4 +1,5 @@
 const { Reservations, Users, FitnessClasses, Rooms } = require("../models");
+const reminderService = require("../services/reminderService");
 
 // GET wszystkie rezerwacje
 const getReservations = async (req, res) => {
@@ -70,6 +71,18 @@ const createReservation = async (req, res) => {
     const { UserID, Status, ClassID } = req.body;
     // RserevationType - userReservation/trainerRerervation
     const newReservation = await Reservations.create({ UserID, Status, ClassID });
+    
+    // Auto-create email reminder for confirmed reservations
+    if (Status === 'confirmed' || Status === 'pending') {
+      try {
+        await reminderService.createReminderForReservation(newReservation);
+        console.log('✅ Email reminder created for reservation:', newReservation.ReservationID);
+      } catch (reminderError) {
+        console.error('❌ Failed to create email reminder:', reminderError.message);
+        // Don't fail the reservation creation if reminder fails
+      }
+    }
+    
     return res.status(201).send(newReservation);
   } catch (err) {
     console.error("Błąd przy tworzeniu rezerwacji:", err);
@@ -82,9 +95,18 @@ const updateReservation = async (req, res) => {
   try {
     const { Status, ClassID } = req.body;
     const reservation = await Reservations.findByPk(req.params.id);
+    const userRole = req.headers['auth-role'] || req.user?.Role;
+    const userId = req.user?.UserID || req.user?.id;
 
     if (!reservation) {
       return res.status(404).send({ message: "Nie znaleziono rezerwacji." });
+    }
+
+    // Users can only update their own reservations, admin/receptionist can update any
+    if (userRole !== 'admin' && userRole !== 'receptionist' && reservation.UserID != userId) {
+      return res.status(403).json({ 
+        message: "Access denied. You can only manage your own reservations." 
+      });
     }
 
     await reservation.update({ Status, ClassID });
@@ -98,6 +120,21 @@ const updateReservation = async (req, res) => {
 // DELETE rezerwacja
 const deleteReservation = async (req, res) => {
   try {
+    const reservation = await Reservations.findByPk(req.params.id);
+    const userRole = req.headers['auth-role'] || req.user?.Role;
+    const userId = req.user?.UserID || req.user?.id;
+
+    if (!reservation) {
+      return res.status(404).send({ message: "Nie znaleziono rezerwacji." });
+    }
+
+    // Users can only delete their own reservations, admin/receptionist can delete any
+    if (userRole !== 'admin' && userRole !== 'receptionist' && reservation.UserID != userId) {
+      return res.status(403).json({ 
+        message: "Access denied. You can only manage your own reservations." 
+      });
+    }
+
     const deleted = await Reservations.destroy({
       where: { ReservationID: req.params.id }
     });

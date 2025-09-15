@@ -1,12 +1,15 @@
 {
   "development": {
-    "username": "sibbo18_admin",
-    "password": "Galaktyka360",
-    "database": "sibbo18_fitness",
-    "host": "mn01.webd.pl",
+    "username": "your_planetscale_username",
+    "password": "your_planetscale_password",
+    "database": "fitness-club",
+    "host": "aws.connect.psdb.cloud",
     "port": 3306,
     "dialect": "mysql",
     "dialectOptions": {
+      "ssl": {
+        "rejectUnauthorized": true
+      },
       "supportBigNumbers": true,
       "bigNumberStrings": true,
       "dateStrings": true,
@@ -15,13 +18,16 @@
     "timezone": "+01:00"
   },
   "production": {
-    "username": "sibbo18_admin",
-    "password": "Galaktyka360",
-    "database": "sibbo18_fitness",
-    "host": "mn01.webd.pl",
+    "username": "your_planetscale_username",
+    "password": "your_planetscale_password",
+    "database": "fitness-club",
+    "host": "aws.connect.psdb.cloud",
     "port": 3306,
     "dialect": "mysql",
     "dialectOptions": {
+      "ssl": {
+        "rejectUnauthorized": true
+      },
       "supportBigNumbers": true,
       "bigNumberStrings": true,
       "dateStrings": true,

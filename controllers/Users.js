@@ -1,6 +1,5 @@
 const { Op } = require("sequelize");
 const Users = require("../models/Users");
-const { canChangeRole, canDeleteUser } = require("../middleware/roleCheck");
 
 /**
  * Get users based on role permissions

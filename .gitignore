@@ -1,1 +1,9 @@
 /node_modules
+.env
+
+# Scripts with database secrets
+import-simple.js
+import-to-planetscale.js
+migrate-with-sequelize.js
+seed-planetscale.js
+test-planetscale-simple.js

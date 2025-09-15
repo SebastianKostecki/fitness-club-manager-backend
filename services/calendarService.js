@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { sequelize, FitnessClasses, RoomReservations, Rooms, Users, Reservations } = require('../models');
+const reminderService = require('./reminderService');
 
 class CalendarService {
     /**
@@ -86,13 +87,24 @@ class CalendarService {
 
             await transaction.commit();
             
-            // Return with room details
-            return await RoomReservations.findByPk(reservation.RoomReservationID, {
+            // Get the full reservation with details
+            const fullReservation = await RoomReservations.findByPk(reservation.RoomReservationID, {
                 include: [
                     { model: Rooms, as: 'room' },
                     { model: Users, as: 'user', attributes: ['UserID', 'Username', 'Email'] }
                 ]
             });
+
+            // Create email reminder for the room reservation
+            try {
+                await this.scheduleRoomReminder(fullReservation);
+                console.log('✅ Email reminder scheduled for room reservation:', fullReservation.RoomReservationID);
+            } catch (reminderError) {
+                console.error('❌ Failed to schedule email reminder for room reservation:', reminderError.message);
+                // Don't fail the reservation creation if reminder fails
+            }
+            
+            return fullReservation;
 
         } catch (error) {
             await transaction.rollback();
@@ -410,6 +422,155 @@ class CalendarService {
             return { events };
 
         } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Schedule email reminder for room reservation
+     * @param {Object} roomReservation - RoomReservation with user and room data
+     * @returns {Promise<Object>} Created reminder or null
+     */
+    async scheduleRoomReminder(roomReservation) {
+        const { EmailReminders } = require('../models');
+        const { v4: uuidv4 } = require('uuid');
+        const { subHours } = require('date-fns');
+
+        try {
+            // Check if reminder already exists to avoid duplicates
+            const existingReminder = await EmailReminders.findOne({
+                where: {
+                    RoomReservationID: roomReservation.RoomReservationID,
+                    Status: 'pending'
+                }
+            });
+
+            if (existingReminder) {
+                console.log('⚠️ Reminder already exists for room reservation:', roomReservation.RoomReservationID);
+                return existingReminder;
+            }
+
+            // Calculate scheduled time (60 minutes before reservation)
+            const reservationStartTime = new Date(roomReservation.StartTime);
+            const scheduledTime = subHours(reservationStartTime, 1);
+
+            // Generate unique cancel token
+            const cancelToken = uuidv4();
+
+            // Create reminder record
+            const reminder = await EmailReminders.create({
+                RoomReservationID: roomReservation.RoomReservationID,
+                UserID: roomReservation.CreatedByUserID,
+                ReservationID: null,  // No class reservation
+                ClassID: null,        // No fitness class
+                ScheduledTime: scheduledTime,
+                Status: 'pending',
+                CancelToken: cancelToken
+            });
+
+            console.log('✅ Room reminder scheduled:', {
+                reminderID: reminder.EmailReminderID,
+                roomReservationID: roomReservation.RoomReservationID,
+                scheduledTime: scheduledTime.toISOString(),
+                roomTitle: roomReservation.Title
+            });
+
+            return reminder;
+
+        } catch (error) {
+            console.error('❌ Failed to schedule room reminder:', {
+                error: error.message,
+                roomReservationID: roomReservation.RoomReservationID
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * Backfill pending room reminders for existing reservations
+     * @returns {Promise<Object>} Results summary
+     */
+    async seedPendingRoomReminders() {
+        const { EmailReminders } = require('../models');
+        const { v4: uuidv4 } = require('uuid');
+        const { subHours } = require('date-fns');
+
+        try {
+            console.log('🌱 Seeding pending room reminders...');
+
+            // Find future active room reservations without reminders
+            const futureReservations = await RoomReservations.findAll({
+                where: {
+                    StartTime: {
+                        [Op.gt]: new Date() // Future reservations only
+                    },
+                    Status: 'Active'
+                },
+                include: [
+                    {
+                        model: EmailReminders,
+                        as: 'email_reminders',
+                        required: false
+                    }
+                ]
+            });
+
+            const reservationsNeedingReminders = futureReservations.filter(rr => 
+                !rr.email_reminders || rr.email_reminders.length === 0
+            );
+
+            console.log(`📊 Found ${reservationsNeedingReminders.length} reservations needing reminders`);
+
+            const results = {
+                processed: 0,
+                created: 0,
+                skipped: 0,
+                errors: []
+            };
+
+            for (const reservation of reservationsNeedingReminders) {
+                results.processed++;
+                
+                try {
+                    const reservationStartTime = new Date(reservation.StartTime);
+                    const scheduledTime = subHours(reservationStartTime, 1);
+
+                    // Skip if scheduled time is in the past
+                    if (scheduledTime <= new Date()) {
+                        console.log(`⏰ Skipping past reminder for reservation ${reservation.RoomReservationID}`);
+                        results.skipped++;
+                        continue;
+                    }
+
+                    const cancelToken = uuidv4();
+
+                    await EmailReminders.create({
+                        RoomReservationID: reservation.RoomReservationID,
+                        UserID: reservation.CreatedByUserID,
+                        ReservationID: null,
+                        ClassID: null,
+                        ScheduledTime: scheduledTime,
+                        Status: 'pending',
+                        CancelToken: cancelToken
+                    });
+
+                    results.created++;
+                    console.log(`✅ Created reminder for reservation ${reservation.RoomReservationID}`);
+
+                } catch (error) {
+                    console.error(`❌ Failed to create reminder for reservation ${reservation.RoomReservationID}:`, error.message);
+                    results.errors.push({
+                        reservationID: reservation.RoomReservationID,
+                        error: error.message
+                    });
+                }
+            }
+
+            console.log('📊 Seeding completed:', results);
+            return results;
+
+        } catch (error) {
+            console.error('❌ Failed to seed room reminders:', error);
             throw error;
         }
     }
