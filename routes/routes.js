@@ -3,7 +3,7 @@ const express = require("express");
 
 const users = require("../controllers/Users.js");
 const auth = require("../controllers/Auth.js");
-const verify = require("./verifyToken");
+const verify = require("../middleware/verifyToken");
 const rooms=require("../controllers/Rooms.js");
 const equipment=require("../controllers/Equipment.js");
 const roomEquipment=require("../controllers/RoomEquipment.js");
