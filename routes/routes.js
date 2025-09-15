@@ -37,6 +37,7 @@ router.get("/users/metrics", verify, users.getSystemMetrics);
 router.get("/users/:id", verify, validateUserExists, users.getUserById);
 router.post("/users", verify, adminOrReceptionist, users.createUser);
 router.put("/users/:id", verify, adminOrReceptionist, validateUserExists, users.updateUser);
+router.put("/users/:id/role", verify, isAdmin, validateUserExists, users.updateUserRole);
 router.delete("/users/:id", verify, adminOrReceptionist, validateUserExists, users.deleteUser);
 
 //Rooms

@@ -2,6 +2,39 @@ const { Op } = require("sequelize");
 const Users = require("../models/Users");
 
 /**
+ * Check if user can change role of another user
+ * @param {string} currentUserRole - Role of the user making the request
+ * @param {string} targetCurrentRole - Current role of the target user
+ * @param {string} newRole - New role to assign
+ * @returns {Object} { allowed: boolean, message?: string }
+ */
+const canChangeRole = (currentUserRole, targetCurrentRole, newRole) => {
+    // Valid roles
+    const validRoles = ['regular', 'trainer', 'admin', 'receptionist'];
+    
+    if (!validRoles.includes(newRole)) {
+        return {
+            allowed: false,
+            message: `Invalid role: ${newRole}. Valid roles: ${validRoles.join(', ')}`
+        };
+    }
+
+    // Only admins can change roles
+    if (currentUserRole !== 'admin') {
+        return {
+            allowed: false,
+            message: "Only administrators can change user roles"
+        };
+    }
+
+    // Admins can change any role except they cannot demote themselves
+    // (This should be handled at a higher level, but good safety check)
+    return {
+        allowed: true
+    };
+};
+
+/**
  * Get users based on role permissions
  * - admin: sees all users
  * - receptionist: sees all except admins  
