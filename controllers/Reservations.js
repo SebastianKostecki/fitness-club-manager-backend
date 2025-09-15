@@ -149,7 +149,21 @@ const deleteReservation = async (req, res) => {
   }
 };
 
+/**
+ * GET raw reservations (without includes) - for admin/debug purposes
+ */
+const getRawReservations = async (req, res) => {
+  try {
+    const reservations = await Reservations.findAll();
+    return res.json(reservations);
+  } catch (err) {
+    console.error("Błąd przy pobieraniu surowych rezerwacji:", err);
+    res.status(500).send({ message: "Błąd serwera" });
+  }
+};
+
 module.exports = {
+  getRawReservations,
   getReservations,
   getReservationById,
   createReservation,
