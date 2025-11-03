@@ -3,26 +3,39 @@ const { FitnessClasses, Users, Rooms } = require("../models");
 
 const getFitnessClasses = async (req, res) => {
     try {
-        const role = req.headers["auth-role"]
-        let classes
-        if(role === "regular"){
+        const role = req.headers["auth-role"];
+        const userId = req.user.id;
+        let classes;
+        
+        if(role === "trener"){
+            // Trener widzi tylko swoje zajęcia
             classes = await FitnessClasses.findAll({
-                where: {UserID: req.user.id}, //zaweza rekordy po id uzytkownika
+                where: { 
+                    TrainerID: userId,
+                    Status: ['Active', 'Draft']
+                },
                 include: [
                     { model: Users, as: "trainer", attributes: ["UserID", "Username"] },
                     { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] }
-                ]
+                ],
+                order: [['StartTime', 'ASC']]
             });
         } else {
+            // Regular users, admin, receptionist widzą wszystkie aktywne zajęcia
             classes = await FitnessClasses.findAll({
+                where: { 
+                    Status: ['Active', 'Draft']
+                },
                 include: [
                     { model: Users, as: "trainer", attributes: ["UserID", "Username"] },
                     { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] }
-                ]
+                ],
+                order: [['StartTime', 'ASC']]
             });
         }
         return res.send(classes);
     } catch (err) {
+        console.error('Error fetching fitness classes:', err);
         res.status(500).send({ message: "Błąd serwera" });
     }
 };
