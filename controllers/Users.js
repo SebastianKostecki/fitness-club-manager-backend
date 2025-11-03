@@ -19,12 +19,31 @@ const canChangeRole = (currentUserRole, targetCurrentRole, newRole) => {
         };
     }
 
-    // Only admins can change roles
-    if (currentUserRole !== 'admin') {
+    // Only admins and receptionists can change roles
+    if (currentUserRole !== 'admin' && currentUserRole !== 'receptionist') {
         return {
             allowed: false,
-            message: "Only administrators can change user roles"
+            message: "Only administrators and receptionists can change user roles"
         };
+    }
+
+    // Receptionists can only change to 'regular' and 'trener' roles
+    if (currentUserRole === 'receptionist') {
+        const allowedRolesForReceptionist = ['regular', 'trener'];
+        if (!allowedRolesForReceptionist.includes(newRole)) {
+            return {
+                allowed: false,
+                message: `Receptionists can only assign roles: ${allowedRolesForReceptionist.join(', ')}`
+            };
+        }
+        
+        // Receptionists cannot change admin or other receptionist roles
+        if (targetCurrentRole === 'admin' || targetCurrentRole === 'receptionist') {
+            return {
+                allowed: false,
+                message: "Receptionists cannot modify administrator or receptionist roles"
+            };
+        }
     }
 
     // Admins can change any role except they cannot demote themselves
@@ -260,6 +279,37 @@ const updateUserRole = async (req, res) => {
 };
 
 /**
+ * Check if user can delete another user
+ */
+const canDeleteUser = (currentUserRole, currentUserId, targetUserId, targetUserRole) => {
+    // Users cannot delete themselves
+    if (currentUserId === targetUserId) {
+        return {
+            allowed: false,
+            message: "Cannot delete your own account"
+        };
+    }
+
+    // Only admin and receptionist can delete users
+    if (currentUserRole !== 'admin' && currentUserRole !== 'receptionist') {
+        return {
+            allowed: false,
+            message: "Only administrators and receptionists can delete users"
+        };
+    }
+
+    // Receptionists cannot delete admins
+    if (currentUserRole === 'receptionist' && targetUserRole === 'admin') {
+        return {
+            allowed: false,
+            message: "Receptionists cannot delete administrators"
+        };
+    }
+
+    return { allowed: true };
+};
+
+/**
  * Delete user with role-based permissions
  */
 const deleteUser = async (req, res) => {
@@ -336,23 +386,65 @@ const getSystemMetrics = async (req, res) => {
     try {
         const userRole = req.user.Role;
         
-        if (userRole !== 'admin') {
+        if (userRole !== 'admin' && userRole !== 'receptionist') {
             return res.status(403).json({ 
                 error: "Access denied" 
             });
         }
 
-        const totalUsers = await Users.count();
+        const sequelize = require('../config/sequelize');
+        
+        // Count total users
+        const totalUsers = await Users.count({
+            where: { DeletedAt: null }
+        });
+        
+        // Count users by role
         const usersByRole = await Users.findAll({
             attributes: [
                 'Role',
                 [Users.sequelize.fn('COUNT', Users.sequelize.col('Role')), 'count']
             ],
+            where: { DeletedAt: null },
             group: ['Role']
         });
 
+        // Count total rooms
+        const [roomsResult] = await sequelize.query(
+            'SELECT COUNT(*) as count FROM rooms WHERE DeletedAt IS NULL'
+        );
+        const totalRooms = parseInt(roomsResult[0].count);
+
+        // Count total fitness classes
+        const [classesResult] = await sequelize.query(
+            'SELECT COUNT(*) as count FROM fitness_classes WHERE DeletedAt IS NULL'
+        );
+        const totalClasses = parseInt(classesResult[0].count);
+
+        // Count total reservations (class reservations + room reservations)
+        const [classReservationsResult] = await sequelize.query(
+            'SELECT COUNT(*) as count FROM reservations WHERE DeletedAt IS NULL'
+        );
+        const [roomReservationsResult] = await sequelize.query(
+            'SELECT COUNT(*) as count FROM room_reservations WHERE DeletedAt IS NULL'
+        );
+        const totalReservations = parseInt(classReservationsResult[0].count) + parseInt(roomReservationsResult[0].count);
+
+        // Count active reservations
+        const [activeClassReservationsResult] = await sequelize.query(
+            'SELECT COUNT(*) as count FROM reservations WHERE Status IN (\'pending\', \'confirmed\') AND DeletedAt IS NULL'
+        );
+        const [activeRoomReservationsResult] = await sequelize.query(
+            'SELECT COUNT(*) as count FROM room_reservations WHERE Status = \'Active\' AND DeletedAt IS NULL'
+        );
+        const activeReservations = parseInt(activeClassReservationsResult[0].count) + parseInt(activeRoomReservationsResult[0].count);
+
         return res.json({
             totalUsers,
+            totalRooms,
+            totalClasses,
+            totalReservations,
+            activeReservations,
             usersByRole
         });
     } catch (err) {
@@ -372,5 +464,7 @@ module.exports = {
     createUser,
     updateUser,
     updateUserRole,
-    deleteUser
+    deleteUser,
+    canChangeRole,
+    canDeleteUser
 };

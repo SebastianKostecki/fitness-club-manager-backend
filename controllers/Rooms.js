@@ -119,16 +119,17 @@ const getRoomDetails = async (req, res) => {
 
 /**
  * Get room calendar/availability
- * Delegates to calendar controller functionality
+ * Supports both single date and date range queries
  */
 const getRoomCalendar = async (req, res) => {
   try {
     const roomId = req.params.id;
-    const { date } = req.query;
+    const { date, from, to } = req.query;
     
-    if (!date) {
+    // Support both single date and date range
+    if (!date && !from && !to) {
       return res.status(400).json({ 
-        error: 'Missing required query parameter: date (YYYY-MM-DD)' 
+        error: 'Missing required query parameter: date (YYYY-MM-DD) or from/to date range' 
       });
     }
 
@@ -137,6 +138,8 @@ const getRoomCalendar = async (req, res) => {
     
     // Set up query params for getRoomAvailability
     req.query.roomId = roomId;
+    req.query.from = from;
+    req.query.to = to;
     req.query.date = date;
     
     return await calendarController.getRoomAvailability(req, res);

@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const calendarController = require('../controllers/calendarController');
-const verifyToken = require('../middleware/verifyToken');
+const verify = require('../middleware/verifyToken');
 
 // Apply authentication middleware to all calendar routes
-router.use(verifyToken);
+router.use(verify);
 
 // Calendar routes
 router.get('/user', calendarController.getUserCalendar);

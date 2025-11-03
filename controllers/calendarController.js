@@ -105,10 +105,11 @@ const getTrainerCalendar = async (req, res) => {
 /**
  * Get room availability
  * GET /calendar/rooms/availability?roomId=1&date=2025-09-10
+ * GET /rooms/:id/calendar?from=2025-09-01&to=2025-09-30
  */
 const getRoomAvailability = async (req, res) => {
     try {
-        const { roomId, date } = req.query;
+        const { roomId, date, from, to } = req.query;
 
         // Validate roomId
         const id = Number(roomId);
@@ -116,59 +117,122 @@ const getRoomAvailability = async (req, res) => {
             return res.status(400).json({ error: 'Invalid roomId' });
         }
 
-        // Validate date format
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
-            return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+        let startUtc, endUtc;
+
+        // Support both single date and date range
+        if (from && to) {
+            // Date range mode (for room calendar)
+            const startDate = new Date(from);
+            const endDate = new Date(to);
+            
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+            }
+            
+            startUtc = startDate;
+            endUtc = new Date(endDate.getTime() + 24 * 60 * 60 * 1000); // Add one day
+        } else if (date) {
+            // Single date mode (for legacy compatibility)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+            }
+            
+            const tz = 'Europe/Warsaw';
+            const startLocal = new Date(`${date}T00:00:00`);
+            const endLocal = new Date(`${date}T23:59:59.999`);
+            startUtc = zonedTimeToUtc(startLocal, tz);
+            endUtc = zonedTimeToUtc(endLocal, tz);
+        } else {
+            return res.status(400).json({ error: 'Missing required parameters: date or from/to' });
         }
 
-        // Calculate day range in Europe/Warsaw timezone
-        const tz = 'Europe/Warsaw';
-        const startLocal = new Date(`${date}T00:00:00`);
-        const endLocal = new Date(`${date}T23:59:59.999`);
-        const startUtc = zonedTimeToUtc(startLocal, tz);
-        const endUtc = zonedTimeToUtc(endLocal, tz);
-
-        console.info('[availability]', { 
+        console.info('[room-availability]', { 
             roomId: id, 
-            date, 
             startUtc: startUtc.toISOString(), 
             endUtc: endUtc.toISOString() 
         });
 
-        // Query both fitness classes and room reservations with UNION ALL
+        // Query both fitness classes and room reservations
         const sql = `
-            SELECT 'class' AS type,
+            SELECT 'fitness_class' AS type,
                    fc.ClassID AS id,
                    fc.Title AS title,
                    fc.StartTime AS start,
                    fc.EndTime AS \`end\`,
-                   'fitness_classes' AS source
+                   r.RoomName as roomName,
+                   u.Username as trainerName,
+                   fc.Capacity as capacity,
+                   'fitness_class' AS color,
+                   JSON_OBJECT(
+                       'classId', fc.ClassID,
+                       'roomId', fc.RoomID,
+                       'trainerId', fc.TrainerID,
+                       'capacity', fc.Capacity,
+                       'roomName', r.RoomName,
+                       'trainerName', u.Username
+                   ) as meta
             FROM fitness_classes fc
+            LEFT JOIN rooms r ON fc.RoomID = r.RoomID
+            LEFT JOIN users u ON fc.TrainerID = u.UserID
             WHERE fc.RoomID = :roomId
               AND fc.Status = 'Active'
-              AND fc.StartTime < :end
-              AND fc.EndTime > :start
+              AND fc.StartTime < :endUtc
+              AND fc.EndTime > :startUtc
+              AND fc.DeletedAt IS NULL
             UNION ALL
             SELECT 'room_reservation' AS type,
                    rr.RoomReservationID AS id,
                    rr.Title AS title,
                    rr.StartTime AS start,
                    rr.EndTime AS \`end\`,
-                   'room_reservations' AS source
+                   r.RoomName as roomName,
+                   u.Username as userName,
+                   NULL as capacity,
+                   'room_reservation' AS color,
+                   JSON_OBJECT(
+                       'reservationId', rr.RoomReservationID,
+                       'roomId', rr.RoomID,
+                       'userId', rr.CreatedByUserID,
+                       'roomName', r.RoomName,
+                       'userName', u.Username
+                   ) as meta
             FROM room_reservations rr
+            LEFT JOIN rooms r ON rr.RoomID = r.RoomID
+            LEFT JOIN users u ON rr.CreatedByUserID = u.UserID
             WHERE rr.RoomID = :roomId
               AND rr.Status = 'Active'
-              AND rr.StartTime < :end
-              AND rr.EndTime > :start
+              AND rr.StartTime < :endUtc
+              AND rr.EndTime > :startUtc
+              AND rr.DeletedAt IS NULL
             ORDER BY start ASC
         `;
 
         const events = await sequelize.query(sql, {
-            replacements: { roomId: id, start: startUtc, end: endUtc },
+            replacements: { roomId: id, startUtc, endUtc },
             type: QueryTypes.SELECT
         });
 
-        return res.json({ roomId: id, date, events });
+        // Format events with proper meta data
+        const formattedEvents = events.map(event => ({
+            id: String(event.id),
+            title: event.title,
+            start: event.start,
+            end: event.end,
+            type: event.type,
+            color: event.type === 'fitness_class' ? '#4CAF50' : '#2196F3',
+            roomName: event.roomName,
+            trainerName: event.trainerName,
+            userName: event.userName,
+            capacity: event.capacity,
+            meta: typeof event.meta === 'string' ? JSON.parse(event.meta) : event.meta
+        }));
+
+        return res.json({ 
+            roomId: id, 
+            events: formattedEvents,
+            total: formattedEvents.length,
+            period: from && to ? { from, to } : { date }
+        });
 
     } catch (error) {
         console.error('getRoomAvailability error:', error);

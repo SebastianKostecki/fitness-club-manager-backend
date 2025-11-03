@@ -71,6 +71,7 @@ router.delete("/classes/:id", verify, adminOrTrainer, validateClassExists, fitne
 
 //Reservations
 router.get("/reservations/raw", verify, reservations.getRawReservations);
+router.get("/reservations/all", verify, reservations.getAllReservations);
 router.get("/reservations", verify, reservations.getReservations);
 router.get("/reservations/:id", verify, validateReservationExists, reservations.getReservationById);
 router.post("/reservations", verify, ensureRole(['regular', 'admin', 'receptionist']), validateReservationReferences, reservations.createReservation);

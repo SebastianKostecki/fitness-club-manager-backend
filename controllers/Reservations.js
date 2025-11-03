@@ -1,5 +1,6 @@
-const { Reservations, Users, FitnessClasses, Rooms } = require("../models");
+const { Reservations, Users, FitnessClasses, Rooms, RoomReservations } = require("../models");
 const reminderService = require("../services/reminderService");
+const sequelize = require('../config/sequelize');
 
 // GET wszystkie rezerwacje
 const getReservations = async (req, res) => {
@@ -162,9 +163,124 @@ const getRawReservations = async (req, res) => {
   }
 };
 
+/**
+ * GET all reservations (both class and room reservations combined)
+ */
+const getAllReservations = async (req, res) => {
+  try {
+    const role = req.headers["auth-role"];
+    const userId = req.user.id;
+    
+    // Build WHERE clauses based on user role
+    let classWhereClause = "r.DeletedAt IS NULL";
+    let roomWhereClause = "rr.DeletedAt IS NULL";
+    
+    if (role === "regular") {
+      classWhereClause += ` AND r.UserID = ${userId}`;
+      roomWhereClause += ` AND rr.CreatedByUserID = ${userId}`;
+    }
+
+    // UNION query to combine both types of reservations
+    const query = `
+      SELECT 
+        'class' as reservation_type,
+        r.ReservationID as id,
+        r.UserID,
+        r.Status,
+        r.CreatedAt,
+        r.UpdatedAt,
+        u.Username as user_name,
+        u.Email as user_email,
+        fc.Title as class_title,
+        fc.StartTime as class_start,
+        fc.EndTime as class_end,
+        rm.RoomName as room_name,
+        rm.Location as room_location,
+        NULL as room_purpose,
+        NULL as reservation_start,
+        NULL as reservation_end
+      FROM reservations r
+      LEFT JOIN users u ON r.UserID = u.UserID AND u.DeletedAt IS NULL
+      LEFT JOIN fitness_classes fc ON r.ClassID = fc.ClassID AND fc.DeletedAt IS NULL
+      LEFT JOIN rooms rm ON fc.RoomID = rm.RoomID AND rm.DeletedAt IS NULL
+      WHERE ${classWhereClause}
+      
+      UNION ALL
+      
+      SELECT 
+        'room' as reservation_type,
+        rr.RoomReservationID as id,
+        rr.CreatedByUserID as UserID,
+        rr.Status,
+        rr.CreatedAt,
+        rr.UpdatedAt,
+        u2.Username as user_name,
+        u2.Email as user_email,
+        rr.Title as class_title,
+        rr.StartTime as class_start,
+        rr.EndTime as class_end,
+        rm2.RoomName as room_name,
+        rm2.Location as room_location,
+        rr.Title as room_purpose,
+        rr.StartTime as reservation_start,
+        rr.EndTime as reservation_end
+      FROM room_reservations rr
+      LEFT JOIN users u2 ON rr.CreatedByUserID = u2.UserID AND u2.DeletedAt IS NULL
+      LEFT JOIN rooms rm2 ON rr.RoomID = rm2.RoomID AND rm2.DeletedAt IS NULL
+      WHERE ${roomWhereClause}
+      
+      ORDER BY CreatedAt DESC
+    `;
+
+    const [results] = await sequelize.query(query);
+    
+    // Transform results to match frontend expectations
+    const transformedResults = results.map(row => ({
+      ReservationID: row.id,
+      UserID: row.UserID,
+      Status: row.Status,
+      CreatedAt: row.CreatedAt,
+      UpdatedAt: row.UpdatedAt,
+      reservation_type: row.reservation_type,
+      user: {
+        Username: row.user_name,
+        Email: row.user_email
+      },
+      fitness_class: row.reservation_type === 'class' ? {
+        Title: row.class_title,
+        StartTime: row.class_start,
+        EndTime: row.class_end,
+        room: {
+          RoomName: row.room_name,
+          Location: row.room_location
+        }
+      } : null,
+      room_reservation: row.reservation_type === 'room' ? {
+        Title: row.room_purpose,
+        StartTime: row.reservation_start,
+        EndTime: row.reservation_end,
+        room: {
+          RoomName: row.room_name,
+          Location: row.room_location
+        }
+      } : null,
+      // Unified fields for easier frontend rendering
+      title: row.class_title,
+      room_name: row.room_name,
+      room_location: row.room_location
+    }));
+
+    return res.json(transformedResults);
+  } catch (err) {
+    console.error("Błąd przy pobieraniu wszystkich rezerwacji:", err);
+    res.status(500).send({ message: "Błąd serwera" });
+  }
+};
+
 module.exports = {
   getRawReservations,
   getReservations,
+  getAllReservations,
   getReservationById,
   createReservation,
   updateReservation,
