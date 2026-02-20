@@ -13,20 +13,22 @@ const EmailReminders  = require("./EmailReminders");
 /* ---------- Sprzęt ↔︎ RoomEquipment ---------- */
 Equipment.hasMany(RoomEquipment, {
   foreignKey: "EquipmentID",
+  constraints: false
 });
 RoomEquipment.belongsTo(Equipment, {
   foreignKey: "EquipmentID",
   as: "equipment",
+  constraints: false
 });
 
 /* ---------- Rooms ↔︎ RoomEquipment ---------- */
 Rooms.hasMany(RoomEquipment, {
   foreignKey: "RoomID",
-  onDelete : "CASCADE",
+  constraints: false
 });
 RoomEquipment.belongsTo(Rooms, {
   foreignKey: "RoomID",
-  onDelete : "CASCADE",
+  constraints: false
 });
 
 /* ---------- FitnessClasses ↔︎ Users (trener) ---------- */
