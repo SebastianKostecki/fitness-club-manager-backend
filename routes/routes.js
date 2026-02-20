@@ -84,10 +84,10 @@ router.get("/equipment-load-data", async (req, res) => {
     console.log('📊 Loading initial equipment data...');
     
     const equipmentData = [
-      { EquipmentName: 'Ketle', Description: '15 kg' },
+      { EquipmentName: 'Ketle 15kg', Description: '15 kg' },
       { EquipmentName: 'Mata', Description: '180 cm x 60 cm' },
       { EquipmentName: 'Roller', Description: '30 x 15 cm' },
-      { EquipmentName: 'Ketle', Description: '5 kg' }
+      { EquipmentName: 'Ketle 5kg', Description: '5 kg' }
     ];
     
     for (const item of equipmentData) {
