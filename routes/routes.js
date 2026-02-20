@@ -50,6 +50,8 @@ router.delete("/rooms/:id", verify, adminOrReceptionist, validateRoomExists, roo
 
 //Equipment
 router.get("/equipment",verify, equipment.getEquipment);
+// TEMP: Equipment without auth for debugging
+router.get("/equipment-test", equipment.getEquipment);
 router.get("/equipment/:id", verify, equipment.getEquipmentById);
 router.post("/equipment", verify, adminOrReceptionist, equipment.createEquipment);
 router.put("/equipment/:id", verify, adminOrReceptionist, equipment.updateEquipment);
