@@ -5,24 +5,12 @@ const RoomEquipment = sequelize.define("room_equipment", {
   RoomID: {
     type: DataTypes.BIGINT,
     allowNull: false,
-    primaryKey: true,
-    references: {
-      model: 'rooms',
-      key: 'RoomID'
-    },
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
+    primaryKey: true
   },
   EquipmentID: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    primaryKey: true,
-    references: {
-      model: 'equipment',
-      key: 'EquipmentID'
-    },
-    onDelete: 'RESTRICT',
-    onUpdate: 'CASCADE'
+    primaryKey: true
   },
   Quantity: {
     type: DataTypes.INTEGER,
