@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -75,5 +75,18 @@ app.listen(PORT, HOST, () => {
 
 // DB + crony po starcie
 sequelize.authenticate()
-  .then(() => { console.log('DB OK'); cronJobs.init(); })
+  .then(async () => { 
+    console.log('DB OK'); 
+    
+    // Sync Equipment table (fix for 500 errors)
+    try {
+      const { Equipment } = require('./models');
+      await Equipment.sync({ alter: true });
+      console.log('✅ Equipment table synced');
+    } catch (err) {
+      console.error('❌ Equipment sync error:', err.message);
+    }
+    
+    cronJobs.init(); 
+  })
   .catch(e => console.error('DB FAIL:', e.message));

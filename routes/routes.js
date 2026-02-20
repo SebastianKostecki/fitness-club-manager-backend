@@ -52,6 +52,20 @@ router.delete("/rooms/:id", verify, adminOrReceptionist, validateRoomExists, roo
 router.get("/equipment",verify, equipment.getEquipment);
 // TEMP: Equipment without auth for debugging
 router.get("/equipment-test", equipment.getEquipment);
+// TEMP: Manual equipment table sync
+router.get("/equipment-sync", async (req, res) => {
+  try {
+    const { Equipment } = require('../models');
+    console.log('🔧 Manual equipment sync started...');
+    await Equipment.sync({ alter: true });
+    console.log('✅ Equipment table synced successfully');
+    res.json({ success: true, message: 'Equipment table synced successfully' });
+  } catch (error) {
+    console.error('❌ Equipment sync error:', error.message);
+    console.error('Full error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 router.get("/equipment/:id", verify, equipment.getEquipmentById);
 router.post("/equipment", verify, adminOrReceptionist, equipment.createEquipment);
 router.put("/equipment/:id", verify, adminOrReceptionist, equipment.updateEquipment);
