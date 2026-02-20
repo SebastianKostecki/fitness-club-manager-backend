@@ -57,6 +57,22 @@ router.delete("/equipment/:id", verify, adminOrReceptionist, equipment.deleteEqu
 
 //RoomEquipment
 router.get("/room-equipment", verify, roomEquipment.getRoomEquipment);
+// TEMP: Room Equipment without auth for debugging
+router.get("/room-equipment-test", roomEquipment.getRoomEquipment);
+// TEMP: Manual room-equipment table sync
+router.get("/room-equipment-sync", async (req, res) => {
+  try {
+    const { RoomEquipment } = require('../models');
+    console.log('🔧 Manual room-equipment sync started...');
+    await RoomEquipment.sync({ alter: true });
+    console.log('✅ RoomEquipment table synced successfully');
+    res.json({ success: true, message: 'RoomEquipment table synced successfully' });
+  } catch (error) {
+    console.error('❌ RoomEquipment sync error:', error.message);
+    console.error('Full error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 router.post("/room-equipment", verify, adminOrReceptionist, roomEquipment.createRoomEquipment);
 router.get("/rooms/:id/details", verify, rooms.getRoomDetails);
 router.put("/room-equipment/:roomId/:equipmentId", verify, adminOrReceptionist, roomEquipment.updateRoomEquipment);

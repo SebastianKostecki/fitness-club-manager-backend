@@ -3,11 +3,15 @@ const { Rooms, Equipment, RoomEquipment } = require("../models");
 
 const getRoomEquipment = async (req, res) => {
     try {
+        console.log('🔍 RoomEquipment.findAll() - starting...');
         const roomEquipment = await RoomEquipment.findAll();
+        console.log('✅ RoomEquipment.findAll() - success, found:', roomEquipment.length, 'items');
         return res.send(roomEquipment);
     } catch (err) {
+        console.error('❌ RoomEquipment.findAll() - ERROR:', err.message);
+        console.error('Full error:', err);
         res.status(500).send({
-            message: "Błąd serwera",
+            message: "Błąd serwera: " + err.message,
         })
     }
 };
