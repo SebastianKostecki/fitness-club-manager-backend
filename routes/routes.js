@@ -50,63 +50,6 @@ router.delete("/rooms/:id", verify, adminOrReceptionist, validateRoomExists, roo
 
 //Equipment
 router.get("/equipment",verify, equipment.getEquipment);
-// TEMP: Equipment without auth for debugging
-router.get("/equipment-test", equipment.getEquipment);
-// TEMP: Manual equipment table sync
-router.get("/equipment-sync", async (req, res) => {
-  try {
-    const { Equipment } = require('../models');
-    console.log('🔧 Manual equipment sync started...');
-    await Equipment.sync({ alter: true });
-    console.log('✅ Equipment table synced successfully');
-    res.json({ success: true, message: 'Equipment table synced successfully' });
-  } catch (error) {
-    console.error('❌ Equipment sync error:', error.message);
-    console.error('Full error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// TEMP: Load initial equipment data
-router.get("/equipment-load-data", async (req, res) => {
-  try {
-    const { Equipment } = require('../models');
-    
-    // Check if data already exists
-    const existingCount = await Equipment.count();
-    if (existingCount > 0) {
-      return res.json({ 
-        success: false, 
-        message: `Equipment table already has ${existingCount} records. Skipping data load.` 
-      });
-    }
-    
-    console.log('📊 Loading initial equipment data...');
-    
-    const equipmentData = [
-      { EquipmentName: 'Ketle 15kg', Description: '15 kg' },
-      { EquipmentName: 'Mata', Description: '180 cm x 60 cm' },
-      { EquipmentName: 'Roller', Description: '30 x 15 cm' },
-      { EquipmentName: 'Ketle 5kg', Description: '5 kg' }
-    ];
-    
-    for (const item of equipmentData) {
-      await Equipment.create(item);
-      console.log(`✅ Created: ${item.EquipmentName} - ${item.Description}`);
-    }
-    
-    console.log('🎉 Equipment data loaded successfully');
-    res.json({ 
-      success: true, 
-      message: `Successfully loaded ${equipmentData.length} equipment records`,
-      data: equipmentData 
-    });
-  } catch (error) {
-    console.error('❌ Equipment data load error:', error.message);
-    console.error('Full error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 router.get("/equipment/:id", verify, equipment.getEquipmentById);
 router.post("/equipment", verify, adminOrReceptionist, equipment.createEquipment);
 router.put("/equipment/:id", verify, adminOrReceptionist, equipment.updateEquipment);
