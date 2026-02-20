@@ -63,17 +63,34 @@ const updateEquipment = async(req, res) => {
 
 const deleteEquipment = async (req, res) => {
     try {
-        const deleted = await Equipment.destroy({
-            where: { EquipmentID: req.params.id}
+        const equipmentId = req.params.id;
+        
+        // Check if equipment is assigned to any rooms (RESTRICT)
+        const { RoomEquipment } = require('../models');
+        const assignments = await RoomEquipment.count({
+            where: { EquipmentID: equipmentId }
         });
+        
+        if (assignments > 0) {
+            return res.status(400).send({
+                message: `Nie można usunąć sprzętu - jest przypisany do ${assignments} sal. Najpierw usuń przypisania.`
+            });
+        }
+        
+        // If no assignments, proceed with deletion
+        const deleted = await Equipment.destroy({
+            where: { EquipmentID: equipmentId}
+        });
+        
         if (deleted) {
             return res.send({ message: "Sprzęt usunięty."});
         } else {
             return res.status(404).send({ message: "Nie znaleziono sprzętu."})
         }
     } catch (err) {
+        console.error("Error deleting equipment:", err);
         res.status(500).send({
-            message: "Błąd serwera",
+            message: "Błąd serwera: " + err.message,
         });
     }
 }

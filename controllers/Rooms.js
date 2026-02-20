@@ -64,17 +64,29 @@ const updateRoom = async (req, res) => {
 
 const deleteRoom = async (req, res) => {
     try {
-        const deleted = await Rooms.destroy({
-            where: { RoomID: req.params.id }
+        const roomId = req.params.id;
+        
+        // First, delete all equipment assignments for this room (CASCADE)
+        const { RoomEquipment } = require('../models');
+        await RoomEquipment.destroy({
+            where: { RoomID: roomId }
         });
+        console.log(`🗑️ Deleted all equipment assignments for room ${roomId}`);
+        
+        // Then delete the room itself
+        const deleted = await Rooms.destroy({
+            where: { RoomID: roomId }
+        });
+        
         if (deleted) {
-            return res.send({ message: "Sala usunięta." });
+            return res.send({ message: "Sala usunięta wraz z przypisaniami sprzętu." });
         } else {
             return res.status(404).send({ message: "Nie znaleziono sali." });
         }
     } catch (err) {
+        console.error("Error deleting room:", err);
         res.status(500).send({
-            message: "Błąd serwera",
+            message: "Błąd serwera: " + err.message,
         });
     }
 };
