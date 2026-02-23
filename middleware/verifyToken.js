@@ -10,7 +10,10 @@ module.exports = function verify(req, res, next) {
       ? authHeader.split(' ')[1]
       : null;
 
-  const token = cookieToken || bearerToken;
+  // Support for auth-token header (used by frontend)
+  const authTokenHeader = req.headers['auth-token'];
+
+  const token = cookieToken || bearerToken || authTokenHeader;
   if (!token) return res.status(401).json({ message: 'Access Denied' });
 
   try {
