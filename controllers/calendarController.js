@@ -162,18 +162,31 @@ const getRoomAvailability = async (req, res) => {
                    r.RoomName as roomName,
                    u.Username as trainerName,
                    fc.Capacity as capacity,
+                   COALESCE(reservations_count.current_reservations, 0) as currentReservations,
+                   (fc.Capacity - COALESCE(reservations_count.current_reservations, 0)) as availableSpots,
+                   CASE WHEN (fc.Capacity - COALESCE(reservations_count.current_reservations, 0)) <= 0 THEN 1 ELSE 0 END as isFull,
                    'fitness_class' AS color,
                    JSON_OBJECT(
                        'classId', fc.ClassID,
                        'roomId', fc.RoomID,
                        'trainerId', fc.TrainerID,
                        'capacity', fc.Capacity,
+                       'currentReservations', COALESCE(reservations_count.current_reservations, 0),
+                       'availableSpots', (fc.Capacity - COALESCE(reservations_count.current_reservations, 0)),
+                       'isFull', CASE WHEN (fc.Capacity - COALESCE(reservations_count.current_reservations, 0)) <= 0 THEN true ELSE false END,
                        'roomName', r.RoomName,
                        'trainerName', u.Username
                    ) as meta
             FROM fitness_classes fc
             LEFT JOIN rooms r ON fc.RoomID = r.RoomID
             LEFT JOIN users u ON fc.TrainerID = u.UserID
+            LEFT JOIN (
+                SELECT ClassID, COUNT(*) as current_reservations
+                FROM reservations 
+                WHERE Status IN ('confirmed', 'pending') 
+                  AND DeletedAt IS NULL
+                GROUP BY ClassID
+            ) reservations_count ON fc.ClassID = reservations_count.ClassID
             WHERE fc.RoomID = :roomId
               AND fc.Status = 'Scheduled'
               AND fc.StartTime < :endUtc
@@ -224,6 +237,9 @@ const getRoomAvailability = async (req, res) => {
             trainerName: event.trainerName,
             userName: event.userName,
             capacity: event.capacity,
+            currentReservations: event.currentReservations || 0,
+            availableSpots: event.availableSpots || event.capacity,
+            isFull: event.isFull || false,
             meta: typeof event.meta === 'string' ? JSON.parse(event.meta) : event.meta
         }));
 

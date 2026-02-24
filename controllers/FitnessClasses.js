@@ -1,5 +1,5 @@
 const { response } = require("express");
-const { FitnessClasses, Users, Rooms } = require("../models");
+const { FitnessClasses, Users, Rooms, Reservations } = require("../models");
 
 const getFitnessClasses = async (req, res) => {
     try {
@@ -16,7 +16,14 @@ const getFitnessClasses = async (req, res) => {
                 },
                 include: [
                     { model: Users, as: "trainer", attributes: ["UserID", "Username"] },
-                    { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] }
+                    { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] },
+                    { 
+                        model: Reservations, 
+                        as: "reservations", 
+                        where: { Status: ['confirmed', 'pending'] },
+                        required: false,
+                        attributes: ["ReservationID", "Status"]
+                    }
                 ],
                 order: [['StartTime', 'ASC']]
             });
@@ -28,12 +35,34 @@ const getFitnessClasses = async (req, res) => {
                 },
                 include: [
                     { model: Users, as: "trainer", attributes: ["UserID", "Username"] },
-                    { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] }
+                    { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] },
+                    { 
+                        model: Reservations, 
+                        as: "reservations", 
+                        where: { Status: ['confirmed', 'pending'] },
+                        required: false,
+                        attributes: ["ReservationID", "Status"]
+                    }
                 ],
                 order: [['StartTime', 'ASC']]
             });
         }
-        return res.send(classes);
+
+        // Add computed fields for availability
+        const classesWithAvailability = classes.map(classItem => {
+            const classData = classItem.toJSON();
+            const currentReservations = classData.reservations ? classData.reservations.length : 0;
+            const availableSpots = classData.Capacity - currentReservations;
+            
+            return {
+                ...classData,
+                currentReservations,
+                availableSpots,
+                isFull: availableSpots <= 0
+            };
+        });
+
+        return res.send(classesWithAvailability);
     } catch (err) {
         console.error('Error fetching fitness classes:', err);
         res.status(500).send({ message: "Błąd serwera" });
@@ -46,11 +75,36 @@ const getFitnessClassById = async (req, res) => {
             where: { ClassID: req.params.id },
             include: [
                 { model: Users, as: "trainer", attributes: ["UserID", "Username"] },
-                { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] }
+                { model: Rooms, as: "room", attributes: ["RoomID", "RoomName"] },
+                { 
+                    model: Reservations, 
+                    as: "reservations", 
+                    where: { Status: ['confirmed', 'pending'] },
+                    required: false,
+                    attributes: ["ReservationID", "Status", "UserID"]
+                }
             ]
         });
-        return res.send(fitnessClass);
+
+        if (!fitnessClass) {
+            return res.status(404).send({ message: "Nie znaleziono zajęć." });
+        }
+
+        // Add computed fields for availability
+        const classData = fitnessClass.toJSON();
+        const currentReservations = classData.reservations ? classData.reservations.length : 0;
+        const availableSpots = classData.Capacity - currentReservations;
+        
+        const classWithAvailability = {
+            ...classData,
+            currentReservations,
+            availableSpots,
+            isFull: availableSpots <= 0
+        };
+
+        return res.send(classWithAvailability);
     } catch (err) {
+        console.error('Error fetching fitness class by ID:', err);
         res.status(500).send({ message: "Błąd serwera" });
     }
 };
