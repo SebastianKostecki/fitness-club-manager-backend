@@ -221,7 +221,7 @@ class CalendarService {
                 StartTime: start,
                 EndTime: end,
                 Capacity: capacity,
-                Status: 'Active'
+                Status: 'Scheduled'
             }, { transaction });
 
             await transaction.commit();
