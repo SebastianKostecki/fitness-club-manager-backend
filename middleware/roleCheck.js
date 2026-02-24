@@ -62,7 +62,7 @@ const adminOrReceptionist = (req, res, next) => {
  */
 const adminOrTrainer = (req, res, next) => {
     const role = getUserRole(req);
-    if (role === 'admin' || role === 'trainer') {
+    if (role === 'admin' || role === 'trener') {
         return next();
     }
     return res.status(403).json({ 

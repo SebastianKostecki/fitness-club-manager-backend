@@ -63,7 +63,7 @@ const getTrainerCalendar = async (req, res) => {
         const userId = req.user.id;
         const userRole = req.headers["auth-role"];
 
-        if (userRole !== 'trainer' && userRole !== 'admin') {
+        if (userRole !== 'trener' && userRole !== 'admin') {
             return res.status(403).json({ 
                 error: 'Access denied. Trainer role required.' 
             });
@@ -306,7 +306,7 @@ const createFitnessClass = async (req, res) => {
         const trainerId = req.user.id;
         const userRole = req.headers["auth-role"];
 
-        if (userRole !== 'trainer' && userRole !== 'admin') {
+        if (userRole !== 'trener' && userRole !== 'admin') {
             return res.status(403).json({ 
                 error: 'Access denied. Trainer role required.' 
             });

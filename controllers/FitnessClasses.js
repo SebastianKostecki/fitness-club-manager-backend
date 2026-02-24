@@ -86,7 +86,7 @@ const updateFitnessClass = async (req, res) => {
         }
 
         // Trainer can only edit their own classes, admin can edit any
-        if (userRole === 'trainer' && fitnessClass.TrainerID != userId) {
+        if (userRole === 'trener' && fitnessClass.TrainerID != userId) {
             return res.status(403).json({ 
                 message: "Access denied. Trainers can only edit their own classes." 
             });
@@ -120,7 +120,7 @@ const deleteFitnessClass = async (req, res) => {
         }
 
         // Trainer can only delete their own classes, admin can delete any
-        if (userRole === 'trainer' && fitnessClass.TrainerID != userId) {
+        if (userRole === 'trener' && fitnessClass.TrainerID != userId) {
             return res.status(403).json({ 
                 message: "Access denied. Trainers can only delete their own classes." 
             });

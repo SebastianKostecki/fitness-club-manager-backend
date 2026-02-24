@@ -145,7 +145,7 @@ class CalendarService {
 
             // Check if trainer exists and is actually a trainer
             const trainer = await Users.findByPk(trainerId, { transaction });
-            if (!trainer || trainer.Role !== 'trainer') {
+            if (!trainer || trainer.Role !== 'trener') {
                 throw new Error('Invalid trainer');
             }
 
@@ -383,7 +383,7 @@ class CalendarService {
                 })));
             }
 
-            if (userRole === 'trainer' || userRole === 'admin') {
+            if (userRole === 'trener' || userRole === 'admin') {
                 // Get trainer's classes
                 const trainerClasses = await FitnessClasses.findAll({
                     where: {
