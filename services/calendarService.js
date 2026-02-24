@@ -361,14 +361,20 @@ class CalendarService {
 
                 // Format class reservations
                 events = events.concat(classReservations.map(cr => ({
-                    id: `class-${cr.fitness_class.ClassID}`,
+                    id: `class-${cr.ReservationID}`,
                     title: cr.fitness_class.Title,
                     start: cr.fitness_class.StartTime,
                     end: cr.fitness_class.EndTime,
                     type: 'class_reservation',
                     roomName: cr.fitness_class.room?.RoomName,
                     trainer: cr.fitness_class.trainer?.Username,
-                    status: cr.Status
+                    status: cr.Status,
+                    meta: {
+                        reservationId: cr.ReservationID,
+                        classId: cr.fitness_class.ClassID,
+                        roomId: cr.fitness_class.RoomID,
+                        trainerId: cr.fitness_class.TrainerID
+                    }
                 })));
 
                 // Format room reservations
@@ -379,7 +385,12 @@ class CalendarService {
                     end: rr.EndTime,
                     type: 'room_reservation',
                     roomName: rr.room?.RoomName,
-                    status: rr.Status
+                    status: rr.Status,
+                    meta: {
+                        reservationId: rr.RoomReservationID,
+                        roomId: rr.RoomID,
+                        userId: rr.CreatedByUserID
+                    }
                 })));
             }
 
