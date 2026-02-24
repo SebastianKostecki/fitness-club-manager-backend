@@ -175,7 +175,7 @@ const getRoomAvailability = async (req, res) => {
             LEFT JOIN rooms r ON fc.RoomID = r.RoomID
             LEFT JOIN users u ON fc.TrainerID = u.UserID
             WHERE fc.RoomID = :roomId
-              AND fc.Status = 'Active'
+              AND fc.Status = 'Scheduled'
               AND fc.StartTime < :endUtc
               AND fc.EndTime > :startUtc
               AND fc.DeletedAt IS NULL

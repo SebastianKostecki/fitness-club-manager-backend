@@ -61,7 +61,7 @@ class CalendarService {
             const conflictingClasses = await FitnessClasses.findAll({
                 where: {
                     RoomID: roomId,
-                    Status: 'Active',
+                    Status: 'Scheduled',
                     [Op.and]: [
                         { StartTime: { [Op.lt]: end } },
                         { EndTime: { [Op.gt]: start } }
@@ -163,7 +163,7 @@ class CalendarService {
             const trainerConflicts = await FitnessClasses.findAll({
                 where: {
                     TrainerID: trainerId,
-                    Status: 'Active',
+                    Status: 'Scheduled',
                     [Op.and]: [
                         { StartTime: { [Op.lt]: end } },
                         { EndTime: { [Op.gt]: start } }
@@ -181,7 +181,7 @@ class CalendarService {
             const roomClassConflicts = await FitnessClasses.findAll({
                 where: {
                     RoomID: roomId,
-                    Status: 'Active',
+                    Status: 'Scheduled',
                     [Op.and]: [
                         { StartTime: { [Op.lt]: end } },
                         { EndTime: { [Op.gt]: start } }
@@ -259,7 +259,7 @@ class CalendarService {
                 where: {
                     RoomID: roomId,
                     StartTime: { [Op.between]: [startOfDay, endOfDay] },
-                    Status: 'Active'
+                    Status: 'Scheduled'
                 },
                 include: [
                     { model: Users, as: 'trainer', attributes: ['Username'] }
@@ -337,7 +337,7 @@ class CalendarService {
                             as: 'fitness_class',
                             where: {
                                 StartTime: { [Op.between]: [start, end] },
-                                Status: 'Active'
+                                Status: 'Scheduled'
                             },
                             include: [
                                 { model: Rooms, as: 'room' },
@@ -389,7 +389,7 @@ class CalendarService {
                     where: {
                         TrainerID: userId,
                         StartTime: { [Op.between]: [start, end] },
-                        Status: 'Active'
+                        Status: 'Scheduled'
                     },
                     include: [
                         { model: Rooms, as: 'room' },

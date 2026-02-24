@@ -10,9 +10,9 @@ const getFitnessClasses = async (req, res) => {
         if(role === "trener"){
             // Trener widzi tylko swoje zajęcia
             classes = await FitnessClasses.findAll({
-                where: { 
+                where: {
                     TrainerID: userId,
-                    Status: ['Active', 'Draft']
+                    Status: ['Scheduled', 'Draft']
                 },
                 include: [
                     { model: Users, as: "trainer", attributes: ["UserID", "Username"] },
@@ -24,7 +24,7 @@ const getFitnessClasses = async (req, res) => {
             // Regular users, admin, receptionist widzą wszystkie aktywne zajęcia
             classes = await FitnessClasses.findAll({
                 where: { 
-                    Status: ['Active', 'Draft']
+                    Status: ['Scheduled', 'Draft']
                 },
                 include: [
                     { model: Users, as: "trainer", attributes: ["UserID", "Username"] },
