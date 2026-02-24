@@ -199,8 +199,11 @@ const getRoomAvailability = async (req, res) => {
                    rr.StartTime AS start,
                    rr.EndTime AS \`end\`,
                    r.RoomName as roomName,
-                   u.Username as userName,
+                   NULL as trainerName,
                    NULL as capacity,
+                   NULL as currentReservations,
+                   NULL as availableSpots,
+                   NULL as isFull,
                    'room_reservation' AS color,
                    JSON_OBJECT(
                        'reservationId', rr.RoomReservationID,
