@@ -87,6 +87,21 @@ const createReservation = async (req, res) => {
         message: "Cannot register for a class that has already started or finished."
       });
     }
+    
+    // 🚫 Sprawdź czy użytkownik już jest zapisany na te zajęcia
+    const existingReservation = await Reservations.findOne({
+      where: {
+        UserID,
+        ClassID,
+        Status: ['confirmed', 'pending']
+      }
+    });
+
+    if (existingReservation) {
+      return res.status(400).json({
+        message: "You are already registered for this class."
+      });
+    }
 
     const newReservation = await Reservations.create({ UserID, Status, ClassID });
 
