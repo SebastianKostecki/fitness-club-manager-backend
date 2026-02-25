@@ -70,21 +70,37 @@ const getReservationById = async (req, res) => {
 const createReservation = async (req, res) => {
   try {
     const { UserID, Status, ClassID } = req.body;
-    // RserevationType - userReservation/trainerRerervation
+
+    // 🔍 Pobierz klasę
+    const fitnessClass = await FitnessClasses.findByPk(ClassID);
+
+    if (!fitnessClass) {
+      return res.status(404).json({ message: "Class not found." });
+    }
+
+    const now = new Date();
+    const classStart = new Date(fitnessClass.StartTime);
+
+    // 🚫 Blokada zapisu po rozpoczęciu
+    if (now >= classStart) {
+      return res.status(400).json({
+        message: "Cannot register for a class that has already started or finished."
+      });
+    }
+
     const newReservation = await Reservations.create({ UserID, Status, ClassID });
-    
-    // Auto-create email reminder for confirmed reservations
+
+    // Email reminder
     if (Status === 'confirmed' || Status === 'pending') {
       try {
         await reminderService.createReminderForReservation(newReservation);
-        console.log('✅ Email reminder created for reservation:', newReservation.ReservationID);
       } catch (reminderError) {
-        console.error('❌ Failed to create email reminder:', reminderError.message);
-        // Don't fail the reservation creation if reminder fails
+        console.error('Reminder error:', reminderError.message);
       }
     }
-    
+
     return res.status(201).send(newReservation);
+
   } catch (err) {
     console.error("Błąd przy tworzeniu rezerwacji:", err);
     res.status(500).send({ message: "Błąd serwera" });
@@ -122,6 +138,7 @@ const updateReservation = async (req, res) => {
 const deleteReservation = async (req, res) => {
   try {
     const reservation = await Reservations.findByPk(req.params.id);
+
     const userRole = req.headers['auth-role'] || req.user?.Role;
     const userId = req.user?.UserID || req.user?.id;
 
@@ -129,23 +146,48 @@ const deleteReservation = async (req, res) => {
       return res.status(404).send({ message: "Nie znaleziono rezerwacji." });
     }
 
-    // Users can only delete their own reservations, admin/receptionist can delete any
+    // 🔒 Dostęp
     if (userRole !== 'admin' && userRole !== 'receptionist' && reservation.UserID != userId) {
-      return res.status(403).json({ 
-        message: "Access denied. You can only manage your own reservations." 
+      return res.status(403).json({
+        message: "Access denied. You can only manage your own reservations."
       });
     }
 
-    const deleted = await Reservations.destroy({
+    // 🔍 Pobierz klasę
+    const fitnessClass = await FitnessClasses.findByPk(reservation.ClassID);
+
+    if (fitnessClass) {
+      const now = new Date();
+      const classStart = new Date(fitnessClass.StartTime);
+
+      // ❌ Nikt nie może anulować po rozpoczęciu
+      if (now >= classStart) {
+        return res.status(400).json({
+          message: "Cannot cancel a class that has already started."
+        });
+      }
+
+      // ❌ 2h blokada dla zwykłych userów
+      if (userRole !== 'admin' && userRole !== 'receptionist') {
+        const twoHoursBeforeStart = new Date(classStart);
+        twoHoursBeforeStart.setHours(twoHoursBeforeStart.getHours() - 2);
+
+        if (now >= twoHoursBeforeStart) {
+          return res.status(400).json({
+            message: "Cancellation is not allowed less than 2 hours before class start."
+          });
+        }
+      }
+    }
+
+    await Reservations.destroy({
       where: { ReservationID: req.params.id }
     });
 
-    if (deleted) {
-      return res.send({ message: "Rezerwacja usunięta." });
-    } else {
-      return res.status(404).send({ message: "Nie znaleziono rezerwacji." });
-    }
+    return res.send({ message: "Rezerwacja usunięta." });
+
   } catch (err) {
+    console.error("Błąd przy usuwaniu rezerwacji:", err);
     res.status(500).send({ message: "Błąd serwera" });
   }
 };
