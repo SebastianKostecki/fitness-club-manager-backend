@@ -87,7 +87,7 @@ const createReservation = async (req, res) => {
         message: "Cannot register for a class that has already started or finished."
       });
     }
-    
+
     // 🚫 Sprawdź czy użytkownik już jest zapisany na te zajęcia
     const existingReservation = await Reservations.findOne({
       where: {
@@ -151,6 +151,7 @@ const updateReservation = async (req, res) => {
 
 // DELETE rezerwacja
 const deleteReservation = async (req, res) => {
+  console.log("🗑 DELETE reservation triggered:", req.params.id);
   try {
     const reservation = await Reservations.findByPk(req.params.id);
 
@@ -174,6 +175,9 @@ const deleteReservation = async (req, res) => {
     if (fitnessClass) {
       const now = new Date();
       const classStart = new Date(fitnessClass.StartTime);
+
+      console.log("Now:", now);
+      console.log("Class start:", classStart);
 
       // ❌ Nikt nie może anulować po rozpoczęciu
       if (now >= classStart) {
