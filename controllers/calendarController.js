@@ -402,10 +402,34 @@ const cancelRoomReservation = async (req, res) => {
         }
 
         // Check if user owns the reservation or is admin
-        if (reservation.CreatedByUserID !== userId && userRole !== 'admin') {
+        if (reservation.CreatedByUserID !== userId &&
+            userRole !== 'admin' &&
+            userRole !== 'receptionist') {
             return res.status(403).json({ 
                 error: 'Access denied. You can only cancel your own reservations.' 
             });
+        }
+
+        const now = new Date();
+        const reservationStart = new Date(reservation.StartTime);
+
+        // ❌ po rozpoczęciu
+        if (now >= reservationStart) {
+            return res.status(400).json({
+                error: "Cannot cancel a reservation that has already started."
+            });
+        }
+
+        // ❌ 2h blokada dla regular
+        if (userRole !== 'admin' && userRole !== 'receptionist') {
+            const twoHoursBeforeStart = new Date(reservationStart);
+            twoHoursBeforeStart.setHours(twoHoursBeforeStart.getHours() - 2);
+
+            if (now >= twoHoursBeforeStart) {
+                return res.status(400).json({
+                    error: "Cancellation is not allowed less than 2 hours before reservation start."
+                });
+            }
         }
 
         // Soft delete (set status to Cancelled)
@@ -434,7 +458,7 @@ const cancelClassReservation = async (req, res) => {
         const userId = req.user.id;
         const userRole = req.headers["auth-role"];
 
-        const { Reservations } = require('../models');
+        const { Reservations, FitnessClasses } = require('../models');
         
         const reservation = await Reservations.findByPk(id);
         
@@ -444,14 +468,44 @@ const cancelClassReservation = async (req, res) => {
             });
         }
 
-        // Check if user owns the reservation or is admin
+        // 🔒 Check if user owns the reservation or is admin
         if (reservation.UserID !== userId && userRole !== 'admin') {
             return res.status(403).json({ 
                 error: 'Access denied. You can only cancel your own reservations.' 
             });
         }
 
-        // Update status to cancelled
+        // 🔎 Pobierz klasę
+        const fitnessClass = await FitnessClasses.findByPk(reservation.ClassID);
+
+        if (fitnessClass) {
+            const now = new Date();
+            const classStart = new Date(fitnessClass.StartTime);
+
+            console.log("NOW:", now);
+            console.log("CLASS START:", classStart);
+
+            // ❌ Nikt nie może anulować po rozpoczęciu
+            if (now >= classStart) {
+                return res.status(400).json({
+                    error: "Cannot cancel a class that has already started."
+                });
+            }
+
+            // ❌ 2h blokada dla zwykłych userów
+            if (userRole !== 'admin' && userRole !== 'receptionist') {
+                const twoHoursBeforeStart = new Date(classStart);
+                twoHoursBeforeStart.setHours(twoHoursBeforeStart.getHours() - 2);
+
+                if (now >= twoHoursBeforeStart) {
+                    return res.status(400).json({
+                        error: "Cancellation is not allowed less than 2 hours before class start."
+                    });
+                }
+            }
+        }
+
+        // ✅ Dopiero tutaj anulujemy
         await reservation.update({ Status: 'cancelled' });
 
         res.json({

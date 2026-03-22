@@ -273,7 +273,13 @@ class ReminderService {
      * @returns {Promise<boolean>} Success status
      */
     async sendClassReminderEmail(reminder) {
-        const user = reminder.user;
+        // IMPORTANT: Fetch user explicitly by reminder.UserID to avoid wrong recipient
+        // (nested RoomReservations->Users 'user' could overwrite EmailReminders->Users in include)
+        const user = await Users.findByPk(reminder.UserID, { attributes: ['UserID', 'Username', 'Email'] });
+        if (!user || !user.Email) {
+            console.error('❌ User not found or has no email:', reminder.UserID);
+            return false;
+        }
         const fitnessClass = reminder.fitness_class;
         const room = fitnessClass.room;
         const trainer = fitnessClass.trainer;
@@ -306,6 +312,8 @@ class ReminderService {
         };
 
         try {
+            // DEBUG: Log actual recipient to verify correct email is being sent
+            console.log('[reminderService] Sending class reminder TO:', emailParams.email, 'UserID:', user?.UserID, 'Username:', user?.Username);
             // Send email via Brevo template (class = template #1)
             const result = await sendTemplate({
                 to: emailParams.email,
@@ -369,7 +377,12 @@ class ReminderService {
      * @returns {Promise<boolean>} Success status
      */
     async sendRoomReminderEmail(reminder) {
-        const user = reminder.user;
+        // IMPORTANT: Fetch user explicitly by reminder.UserID to avoid wrong recipient
+        const user = await Users.findByPk(reminder.UserID, { attributes: ['UserID', 'Username', 'Email'] });
+        if (!user || !user.Email) {
+            console.error('❌ User not found or has no email:', reminder.UserID);
+            return false;
+        }
         const roomReservation = reminder.room_reservation;
         const room = roomReservation.room;
 
@@ -401,6 +414,8 @@ class ReminderService {
         };
 
         try {
+            // DEBUG: Log actual recipient to verify correct email is being sent
+            console.log('[reminderService] Sending room reminder TO:', emailParams.email, 'UserID:', user?.UserID, 'Username:', user?.Username);
             // Send email via Brevo template (personal room = template #2)
             const result = await sendTemplate({
                 to: emailParams.email,
