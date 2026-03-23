@@ -141,11 +141,96 @@ class ReminderService {
      * Process pending reminders that are due to be sent
      * @returns {Promise<Object>} Processing results
      */
+    // async processPendingReminders() {
+    //     try {
+    //         const now = new Date();
+            
+    //         // Find pending reminders that are due (both class and room reservations)
+    //         const pendingReminders = await EmailReminders.findAll({
+    //             where: {
+    //                 Status: 'pending',
+    //                 ScheduledTime: {
+    //                     [Op.lte]: now
+    //                 }
+    //             },
+    //             include: [
+    //                 {
+    //                     model: Users,
+    //                     as: 'user',
+    //                     attributes: ['UserID', 'Username', 'Email']
+    //                 },
+    //                 {
+    //                     model: Reservations,
+    //                     as: 'reservation',
+    //                     required: false, // LEFT JOIN - optional for room reservations
+    //                     where: { Status: { [Op.in]: ['pending', 'confirmed'] } }
+    //                 },
+    //                 {
+    //                     model: FitnessClasses,
+    //                     as: 'fitness_class',
+    //                     required: false, // LEFT JOIN - optional for room reservations
+    //                     include: [
+    //                         { model: Rooms, as: 'room' },
+    //                         { model: Users, as: 'trainer', attributes: ['UserID', 'Username'] }
+    //                     ]
+    //                 },
+    //                 {
+    //                     model: RoomReservations,
+    //                     as: 'room_reservation',
+    //                     required: false, // LEFT JOIN - optional for class reservations
+    //                     where: { Status: 'Active' }, // Only active room reservations
+    //                     include: [
+    //                         { model: Rooms, as: 'room' },
+    //                         { model: Users, as: 'user', attributes: ['UserID', 'Username', 'Email'] }
+    //                     ]
+    //                 }
+    //             ],
+    //             limit: 50 // Process max 50 at a time
+    //         });
+
+    //         console.log(`📧 Processing ${pendingReminders.length} pending reminders...`);
+
+    //         const results = {
+    //             processed: 0,
+    //             sent: 0,
+    //             failed: 0,
+    //             errors: []
+    //         };
+
+    //         for (const reminder of pendingReminders) {
+    //             results.processed++;
+                
+    //             try {
+    //                 const success = await this.sendReminderEmail(reminder);
+    //                 if (success) {
+    //                     results.sent++;
+    //                 } else {
+    //                     results.failed++;
+    //                 }
+    //             } catch (error) {
+    //                 results.failed++;
+    //                 results.errors.push({
+    //                     reminderID: reminder.EmailReminderID,
+    //                     error: error.message
+    //                 });
+    //             }
+    //         }
+
+    //         console.log('📊 Reminder processing complete:', results);
+    //         return results;
+
+    //     } catch (error) {
+    //         console.error('❌ Failed to process pending reminders:', error);
+    //         throw error;
+    //     }
+    // }
+
     async processPendingReminders() {
         try {
             const now = new Date();
-            
-            // Find pending reminders that are due (both class and room reservations)
+            console.log("🕒 NOW (UTC):", now.toISOString());
+    
+            // 1️⃣ Pobierz TYLKO po czasie i statusie
             const pendingReminders = await EmailReminders.findAll({
                 where: {
                     Status: 'pending',
@@ -162,13 +247,12 @@ class ReminderService {
                     {
                         model: Reservations,
                         as: 'reservation',
-                        required: false, // LEFT JOIN - optional for room reservations
-                        where: { Status: { [Op.in]: ['pending', 'confirmed'] } }
+                        required: false
                     },
                     {
                         model: FitnessClasses,
                         as: 'fitness_class',
-                        required: false, // LEFT JOIN - optional for room reservations
+                        required: false,
                         include: [
                             { model: Rooms, as: 'room' },
                             { model: Users, as: 'trainer', attributes: ['UserID', 'Username'] }
@@ -177,37 +261,66 @@ class ReminderService {
                     {
                         model: RoomReservations,
                         as: 'room_reservation',
-                        required: false, // LEFT JOIN - optional for class reservations
-                        where: { Status: 'Active' }, // Only active room reservations
+                        required: false,
                         include: [
                             { model: Rooms, as: 'room' },
                             { model: Users, as: 'user', attributes: ['UserID', 'Username', 'Email'] }
                         ]
                     }
                 ],
-                limit: 50 // Process max 50 at a time
+                limit: 50
             });
-
-            console.log(`📧 Processing ${pendingReminders.length} pending reminders...`);
-
+    
+            console.log(`📧 Found ${pendingReminders.length} due reminders`);
+    
             const results = {
                 processed: 0,
                 sent: 0,
                 failed: 0,
                 errors: []
             };
-
+    
             for (const reminder of pendingReminders) {
                 results.processed++;
-                
+    
+                console.log("➡ Processing reminder:", reminder.EmailReminderID);
+                console.log("   Scheduled:", reminder.ScheduledTime);
+    
                 try {
+    
+                    // 2️⃣ Walidacja biznesowa – ręcznie
+                    if (reminder.reservation) {
+                        if (!['pending', 'confirmed'].includes(reminder.reservation.Status)) {
+                            console.log("⏭ Skipping - class reservation not active");
+                            await reminder.update({ Status: 'skipped' });
+                            continue;
+                        }
+                    }
+    
+                    if (reminder.room_reservation) {
+                        if (reminder.room_reservation.Status !== 'Active') {
+                            console.log("⏭ Skipping - room reservation not active");
+                            await reminder.update({ Status: 'skipped' });
+                            continue;
+                        }
+                    }
+    
+                    // 3️⃣ Wysyłka
                     const success = await this.sendReminderEmail(reminder);
+    
                     if (success) {
+                        await reminder.update({ Status: 'sent' });
                         results.sent++;
                     } else {
+                        await reminder.update({ Status: 'failed' });
                         results.failed++;
                     }
+    
                 } catch (error) {
+                    console.error("❌ Reminder failed:", error);
+    
+                    await reminder.update({ Status: 'failed' });
+    
                     results.failed++;
                     results.errors.push({
                         reminderID: reminder.EmailReminderID,
@@ -215,10 +328,10 @@ class ReminderService {
                     });
                 }
             }
-
+    
             console.log('📊 Reminder processing complete:', results);
             return results;
-
+    
         } catch (error) {
             console.error('❌ Failed to process pending reminders:', error);
             throw error;
