@@ -1,6 +1,5 @@
 // services/brevoService.js
-// Kompatybilne z @getbrevo/brevo (nowe SDK) i sib-api-v3-sdk (legacy)
-// Leniwa inicjalizacja - klucz API sprawdzany dopiero przy pierwszym użyciu
+// @getbrevo/brevo - leniwa inicjalizacja przy pierwszym użyciu
 
 let transactionalApi = null;
 let SendSmtpEmailCtor = null;
@@ -13,39 +12,18 @@ function getTransactionalApi() {
     return transactionalApi;
   }
 
-  const key = process.env.BREVO_API_KEY;
-  if (!key) {
+  if (!process.env.BREVO_API_KEY) {
     throw new Error('Missing BREVO_API_KEY');
   }
 
-  // Próba nowego SDK
-  try {
-    const Brevo = require('@getbrevo/brevo');
-    const defaultClient = Brevo.ApiClient.instance;
-    defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-    transactionalApi = new Brevo.TransactionalEmailsApi();
-    SendSmtpEmailCtor = Brevo.SendSmtpEmail;
-    sdkName = '@getbrevo/brevo';
-    console.log('[brevoService] Initialized SDK:', sdkName);
-    return transactionalApi;
-  } catch (e) {
-    // spróbujemy legacy
-  }
-
-  // Fallback do legacy SDK
-  try {
-    const Sib = require('sib-api-v3-sdk');
-    const client = Sib.ApiClient.instance;
-    client.authentications['api-key'].apiKey = key;
-    transactionalApi = new Sib.TransactionalEmailsApi();
-    SendSmtpEmailCtor = Sib.SendSmtpEmail;
-    sdkName = 'sib-api-v3-sdk';
-    console.log('[brevoService] Initialized SDK (legacy):', sdkName);
-    return transactionalApi;
-  } catch (e2) {
-    console.error('[brevoService] No Brevo SDK available');
-    throw new Error('Install @getbrevo/brevo or sib-api-v3-sdk');
-  }
+  const Brevo = require('@getbrevo/brevo');
+  const defaultClient = Brevo.ApiClient.instance;
+  defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+  transactionalApi = new Brevo.TransactionalEmailsApi();
+  SendSmtpEmailCtor = Brevo.SendSmtpEmail;
+  sdkName = '@getbrevo/brevo';
+  console.log('[brevoService] Initialized SDK:', sdkName);
+  return transactionalApi;
 }
 
 /**
