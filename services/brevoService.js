@@ -17,9 +17,11 @@ function getTransactionalApi() {
   }
 
   const Brevo = require('@getbrevo/brevo');
-  const defaultClient = Brevo.ApiClient.instance;
-  defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
   transactionalApi = new Brevo.TransactionalEmailsApi();
+  transactionalApi.setApiKey(
+    Brevo.TransactionalEmailsApiApiKeys.apiKey,
+    process.env.BREVO_API_KEY
+  );
   SendSmtpEmailCtor = Brevo.SendSmtpEmail;
   sdkName = '@getbrevo/brevo';
   console.log('[brevoService] Initialized SDK:', sdkName);
