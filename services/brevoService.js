@@ -104,7 +104,7 @@ async function sendClassReminder({ toEmail, toName, params }) {
     params,
     senderEmail: process.env.BREVO_SENDER_EMAIL,
     senderName: process.env.BREVO_SENDER_NAME,
-    replyToEmail: process.env.BREVO_SENDER_EMAIL,
+    replyToEmail: process.env.BREVO_REPLY_TO,
     tags: ['class-reminder', '1h-before']
   });
 }
