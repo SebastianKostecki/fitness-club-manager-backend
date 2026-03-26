@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Users = require("../models/Users");
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-prod'; // ustawione na Render
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // ===== Schematy walidacji =====
 const registerSchema = Joi.object({

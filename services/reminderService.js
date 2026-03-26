@@ -11,7 +11,7 @@ class ReminderService {
         this.frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:4200';
         /** Public base URL of this API (no trailing slash). Used for cancel links in emails — must hit /jobs/..., not the SPA. */
         this.publicApiBaseUrl = (process.env.PUBLIC_API_URL || process.env.API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '');
-        this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+        this.jwtSecret = process.env.JWT_SECRET;
     }
 
     /**

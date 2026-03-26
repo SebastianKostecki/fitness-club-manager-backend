@@ -1,4 +1,6 @@
 require('dotenv').config();
+const { validateEnv } = require('./config/validateEnv');
+validateEnv();
 
 const express = require('express');
 const cors = require('cors');
@@ -71,6 +73,7 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, HOST, () => {
   console.timeEnd('boot');
   console.log(`🚀 FITNESS CLUB BACKEND READY on http://${HOST}:${PORT} - CORS configured for credentials`);
+  console.log('[env] Server bind HOST=%s PORT=%s', HOST, PORT);
 });
 
 // DB + crony po starcie

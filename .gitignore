@@ -1,12 +1,10 @@
+# dependencies
 /node_modules
+
+# env files (VERY IMPORTANT)
 .env
-
-# Scripts with database secrets
-import-simple.js
-import-to-planetscale.js
-migrate-with-sequelize.js
-seed-planetscale.js
-test-planetscale-simple.js
+.env.*
+*.env
 
 # local scripts & secrets
 import-*.js
@@ -16,30 +14,9 @@ check-*.js
 reset-*.js
 update-*.js
 test-*.js
+
+# database / dumps
 *.sql
+
+# cookies / session dumps
 *cookies*.txt
-
-
-# local scripts & secrets
-import-*.js
-seed-*.js
-create-*.js
-check-*.js
-reset-*.js
-update-*.js
-test-*.js
-*.sql
-*cookies*.txt
-
-
-# local scripts & secrets
-import-*.js
-seed-*.js
-create-*.js
-check-*.js
-reset-*.js
-update-*.js
-test-*.js
-*.sql
-*cookies*.txt
-

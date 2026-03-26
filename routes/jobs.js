@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const cronJobs = require('../jobs/cronJobs');
 const reminderService = require('../services/reminderService');
-const brevoService = require('../services/brevoService');
 const calendarService = require('../services/calendarService');
 const { Reservations, EmailReminders, RoomReservations } = require('../models');
 
@@ -14,8 +13,8 @@ router.post('/send-reminders', async (req, res) => {
     try {
         // Verify internal key
         const internalKey = req.headers['x-internal-key'] || req.body.key;
-        const expectedKey = process.env.X_INTERNAL_KEY;
-        
+        const expectedKey = process.env.X_INTERNAL_KEY ?? process.env.CRON_INTERNAL_KEY;
+
         if (!expectedKey || internalKey !== expectedKey) {
             return res.status(401).json({
                 error: 'Unauthorized',

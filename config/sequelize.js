@@ -1,42 +1,53 @@
-const { Sequelize } = require("sequelize");
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
+const { assertDatabaseEnv } = require('./validateEnv');
 
-// Use DATABASE_URL for PlanetScale or fallback to individual env vars
-const sequelize = process.env.DATABASE_URL 
-    ? new Sequelize(process.env.DATABASE_URL, {
-        dialect: "mysql",
-        logging: false, // Disable logging in production
-        pool: { 
-            max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
+assertDatabaseEnv();
+
+const databaseUrl = process.env.DATABASE_URL && String(process.env.DATABASE_URL).trim();
+
+const sequelize = databaseUrl
+  ? new Sequelize(databaseUrl, {
+      dialect: 'mysql',
+      logging: false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      },
+      dialectOptions: {
+        ssl: {
+          rejectUnauthorized: true
         },
-        dialectOptions: {
-            ssl: {
-                rejectUnauthorized: true
-            },
-            connectTimeout: 60000,
-            acquireTimeout: 60000,
-            timeout: 60000,
-            supportBigNumbers: true,
-            bigNumberStrings: true
-        }
+        connectTimeout: 60000,
+        acquireTimeout: 60000,
+        timeout: 60000,
+        supportBigNumbers: true,
+        bigNumberStrings: true
+      }
     })
-    : new Sequelize(
-        process.env.DB_NAME || "sibbo18_fitness", 
-        process.env.DB_USER || "sibbo18_admin",
-        process.env.DB_PASSWORD || "Galaktyka360",
-        {
-            host: process.env.DB_HOST || "mn01.webd.pl",
-            dialect: "mysql",
-            logging: console.log,
-            pool: { acquire: 15000 },
-            dialectOptions: { 
-                connectTimeout: 10000, 
-                supportBigNumbers: true, 
-                bigNumberStrings: true 
-            }
+  : new Sequelize(
+      String(process.env.DB_NAME).trim(),
+      String(process.env.DB_USER).trim(),
+      process.env.DB_PASSWORD,
+      {
+        host: String(process.env.DB_HOST).trim(),
+        dialect: 'mysql',
+        logging: console.log,
+        pool: { acquire: 15000 },
+        ...(process.env.DB_PORT
+          ? { port: Number(process.env.DB_PORT) }
+          : {}),
+        dialectOptions: {
+          connectTimeout: 10000,
+          supportBigNumbers: true,
+          bigNumberStrings: true,
+          ...((process.env.DB_SSL === 'true' || process.env.DB_SSL === '1')
+            ? { ssl: { rejectUnauthorized: true } }
+            : {})
         }
-    )
+      }
+    );
 
 module.exports = sequelize;
