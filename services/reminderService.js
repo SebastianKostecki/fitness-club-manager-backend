@@ -9,7 +9,18 @@ class ReminderService {
     constructor() {
         this.timezone = process.env.TZ || 'Europe/Warsaw';
         this.frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:4200';
+        /** Public base URL of this API (no trailing slash). Used for cancel links in emails — must hit /jobs/..., not the SPA. */
+        this.publicApiBaseUrl = (process.env.PUBLIC_API_URL || process.env.API_BASE_URL || 'http://localhost:8080').replace(/\/$/, '');
         this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+    }
+
+    /**
+     * @param {string} pathWithLeadingSlash e.g. '/jobs/cancel-reservation'
+     * @param {Record<string, string>} [query]
+     */
+    buildPublicApiUrl(pathWithLeadingSlash, query = {}) {
+        const q = new URLSearchParams(query).toString();
+        return `${this.publicApiBaseUrl}${pathWithLeadingSlash}${q ? `?${q}` : ''}`;
     }
 
     /**
@@ -409,8 +420,9 @@ class ReminderService {
         const endTimeUTC = new Date(fitnessClass.EndTime);
         const duration = differenceInMinutes(endTimeUTC, startTimeUTC);
 
-        // Generate cancel URL
-        const cancelUrl = `${this.frontendBaseUrl}/cancel-reservation?token=${reminder.CancelToken}`;
+        const cancelUrl = this.buildPublicApiUrl('/jobs/cancel-reservation', {
+            token: reminder.CancelToken
+        });
 
         // Prepare email parameters
         const emailParams = {
@@ -511,8 +523,9 @@ class ReminderService {
         const endTimeUTC = new Date(roomReservation.EndTime);
         const duration = differenceInMinutes(endTimeUTC, startTimeUTC);
 
-        // Generate cancel URL for room reservation
-        const cancelUrl = `${this.frontendBaseUrl}/cancel-room-reservation?token=${reminder.CancelToken}`;
+        const cancelUrl = this.buildPublicApiUrl('/jobs/cancel-room-reservation', {
+            token: reminder.CancelToken
+        });
 
         // Prepare email parameters for room reservation
         const emailParams = {
@@ -636,6 +649,19 @@ class ReminderService {
             return null;
         } catch (error) {
             console.error('❌ Invalid cancel token:', error.message);
+            return null;
+        }
+    }
+
+    verifyRoomCancelToken(token) {
+        try {
+            const decoded = jwt.verify(token, this.jwtSecret);
+            if (decoded.type === 'cancel_room') {
+                return decoded;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Invalid room cancel token:', error.message);
             return null;
         }
     }

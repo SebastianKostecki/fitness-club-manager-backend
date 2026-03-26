@@ -4,7 +4,7 @@ const cronJobs = require('../jobs/cronJobs');
 const reminderService = require('../services/reminderService');
 const brevoService = require('../services/brevoService');
 const calendarService = require('../services/calendarService');
-const { Reservations, EmailReminders } = require('../models');
+const { Reservations, EmailReminders, RoomReservations } = require('../models');
 
 /**
  * Internal endpoint to trigger email reminders processing
@@ -146,6 +146,79 @@ router.get('/cancel-reservation', async (req, res) => {
 
     } catch (error) {
         console.error('❌ /jobs/cancel-reservation error:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * Cancel room reservation using secure token from email (same pattern as class reservations)
+ */
+router.get('/cancel-room-reservation', async (req, res) => {
+    try {
+        const { token } = req.query;
+
+        if (!token) {
+            return res.status(400).json({
+                error: 'Bad request',
+                message: 'Cancel token is required'
+            });
+        }
+
+        const decoded = reminderService.verifyRoomCancelToken(token);
+        if (!decoded) {
+            return res.status(401).json({
+                error: 'Invalid token',
+                message: 'The cancellation link has expired or is invalid'
+            });
+        }
+
+        const reservation = await RoomReservations.findOne({
+            where: {
+                RoomReservationID: decoded.roomReservationId,
+                CreatedByUserID: decoded.userId
+            }
+        });
+
+        if (!reservation) {
+            return res.status(404).json({
+                error: 'Not found',
+                message: 'Room reservation not found or access denied'
+            });
+        }
+
+        if (reservation.Status === 'Cancelled') {
+            return res.status(400).json({
+                error: 'Already cancelled',
+                message: 'This reservation has already been cancelled'
+            });
+        }
+
+        await reservation.update({ Status: 'Cancelled' });
+
+        await EmailReminders.update(
+            { Status: 'failed', ErrorMessage: 'Room reservation cancelled by user' },
+            {
+                where: {
+                    RoomReservationID: decoded.roomReservationId,
+                    Status: 'pending'
+                }
+            }
+        );
+
+        console.log('✅ Room reservation cancelled via email link:', {
+            roomReservationId: decoded.roomReservationId,
+            userId: decoded.userId
+        });
+
+        const frontendUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:4200';
+        const redirectUrl = `${frontendUrl}/cancel-success?roomReservation=${decoded.roomReservationId}`;
+
+        res.redirect(redirectUrl);
+    } catch (error) {
+        console.error('❌ /jobs/cancel-room-reservation error:', error);
         res.status(500).json({
             error: 'Internal server error',
             message: error.message
